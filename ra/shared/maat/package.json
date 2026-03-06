@@ -1,0 +1,15 @@
+{
+  "name": "@dizzy-resume/maat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ma'at's Scale - Field mapping engine",
+  "exports": {
+    ".": "./src/index.ts",
+    "/types": "./src/types.ts",
+    "/patterns": "./src/patterns.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -35,16 +35,3 @@ export function deserializeArray<T>(jsonString: string): T[] {
     return [];
   }
 }
-
-// ============================================================================
-// DATABASE INITIALIZATION
-// ============================================================================
-
-import schema from './schema.sql?raw';
-
-export async function initDatabase(dbPath: string): Promise<void> {
-  // This will be implemented in the Tauri backend
-  // For now, just export the schema
-}
-
-export { schema };
