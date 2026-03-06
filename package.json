@@ -1,0 +1,25 @@
+{
+  "name": "dizzy-resume",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DizzyResume - Turn 45-minute applications into 5-minute ones",
+  "scripts": {
+    "dev": "pnpm --filter @dizzy-resume/ra tauri:dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "lint": "eslint . --ext .ts,.tsx",
+    "postinstall": "pnpm -r install"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
