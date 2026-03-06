@@ -5,6 +5,27 @@ A Tauri + Chrome Extension system that turns 45-minute applications into 5-minut
 
 ---
 
+> "Like the gods of old Egypt who organized chaos into order, DizzyResume brings structure to the chaos of job applications. Each component is named after an Egyptian deity, reflecting its role in the grand system."
+
+---
+
+## 🏛️ The Egyptian Pantheon of DizzyResume
+
+| Deity | Role | Domain |
+|-------|------|--------|
+| **Ra** ☀️ | The Sun God | Central desktop app — the source of all power and data |
+| **Horus** 🦅 | The Falcon God | Browser extension — sees all from above, flies between realms |
+| **Ma'at** ⚖️ | Goddess of Truth | Field mapping engine — weighs each field against the feather of truth |
+| **Wadjet** 👁️ | The All-Seeing Eye | ATS detection — watches and identifies every platform |
+| **Ptah** 🔨 | The Creator God | Profile database — crafts and stores all user data |
+| **Seshat** 📜 | Goddess of Records | Application tracker — scribe who tracks every deed |
+| **Serket** 🦂 | The Scorpion Goddess | Credential vault — protector of secrets |
+| **Thoth** 📝 | God of Wisdom | Cover letter assembler — weaves words into persuasion |
+| **Bes** 🏠 | The Household God | Quick-copy panel — always near, infinitely helpful |
+| **Hapi** 🌊 | God of the Nile | Local API server — the life-giving flow connecting all realms |
+
+---
+
 ## Table of Contents
 
 - [Henry's Sketch Decoded](#henrys-sketch-decoded)
@@ -24,12 +45,12 @@ Here's what Henry drew on that notepad — it's actually a solid architectural c
 
 ### Key Components
 
-| Component | Description |
-|-----------|-------------|
-| **DizzyResumeCopyPaste.rs** | A Rust backend that stores structured resume data — description fields, experience entries, references — as reusable templates. The '.rs' means he wants this in Rust. |
-| **Web Browser (right box)** | The ATS form in the browser with fields like Description, Experience, Ref 1, Comments. These are the inputs the app needs to fill. |
-| **TamperMonkey (top arrow)** | A userscript that runs inside the browser, acting as the bridge between the Rust backend and the webpage DOM. |
-| **Autofill mapping (bottom)** | Maps <input> element CSS selectors / IDs to DRCP.rs fields. Example: ".input1" maps to "DRCP Short Desc" — this is the field-matching logic. |
+| Component | Egyptian Name | Description |
+|-----------|---------------|-------------|
+| **DizzyResumeCopyPaste.rs** | **Ra / Ptah** | A Rust backend (Ra) that stores structured resume data — description fields, experience entries, references — as reusable templates. The '.rs' means he wants this in Rust. Ptah crafts the data structures. |
+| **Web Browser (right box)** | **The Mortal Realm** | The ATS form in the browser with fields like Description, Experience, Ref 1, Comments. These are the inputs the app needs to fill. |
+| **TamperMonkey (top arrow)** | **Horus** | A userscript that runs inside the browser, acting as the bridge between Ra's backend and the webpage DOM. The falcon god who flies between realms. |
+| **Autofill mapping (bottom)** | **Ma'at's Scale** | Maps <input> element CSS selectors / IDs to DRCP.rs fields. Example: ".input1" maps to "DRCP Short Desc" — this is the field-matching logic where Ma'at weighs truth against form. |
 
 > **✓ Henry's Core Insight**
 >
@@ -56,7 +77,28 @@ Here's what Henry drew on that notepad — it's actually a solid architectural c
 
 Building on Henry's sketch, here's the expanded architecture. The app is called **DizzyResume** (keeping his naming). It's a three-component system:
 
-### 1. DizzyResume Desktop App
+---
+
+### 🏛️ The Egyptian Pantheon
+
+**DizzyResume's components are named after Egyptian deities, each embodying their function:**
+
+| Component | Egyptian Name | Domain |
+|-----------|---------------|--------|
+| Desktop App | **Ra** | Sun god — the central source, everything radiates from here |
+| Browser Extension | **Horus** | Falcon god — soars across domains, sees all from above |
+| Field Mapping Engine | **Ma'at** | Goddess of truth & balance — weighs each field against the feather of truth |
+| ATS Detection | **Wadjet** | Eye of Horus — all-seeing guardian that watches and identifies |
+| Profile Database | **Ptah** | Creator god — the craftsman who builds and stores all things |
+| Application Tracker | **Seshat** | Goddess of record-keeping — the scribe who tracks every deed |
+| Credential Vault | **Serket** | Scorpion goddess — protector of secrets, venomous to intruders |
+| Cover Letter Assembler | **Thoth** | God of wisdom & writing — weaves words into persuasion |
+| Quick-Copy Panel | **Bes** | Dwarf household god — small, always near, infinitely helpful |
+| Local API Server | **Hapi** | God of the Nile — the life-giving flow that connects all realms |
+
+---
+
+### 1. Ra — DizzyResume Desktop App
 **Tech:** Tauri (Rust backend + Web frontend)
 
 - Local SQLite database stores all user profiles, resume templates, references, cover letters, application history
@@ -66,7 +108,7 @@ Building on Henry's sketch, here's the expanded architecture. The app is called 
 - Export/import profiles for backup
 - Application tracker dashboard with stats
 
-### 2. DizzyResume Browser Extension
+### 2. Horus — DizzyResume Browser Extension
 **Tech:** Chrome Extension (Manifest V3) — replaces Tampermonkey
 
 - Detects when you're on a known ATS domain (Workday, Greenhouse, Lever, etc.)
@@ -76,7 +118,7 @@ Building on Henry's sketch, here's the expanded architecture. The app is called 
 - Handles the messy reality: React controlled inputs, shadow DOM, iframes, dynamically loaded fields
 - ATS-specific adapters — custom fill logic per platform because each one is different
 
-### 3. Field Mapping Engine
+### 3. Ma'at — Field Mapping Engine
 **Tech:** The intelligence layer (Henry's crossing arrows)
 
 - Maintains a registry of known ATS field patterns — CSS selectors, aria-labels, placeholder text, input names
@@ -95,55 +137,55 @@ Henry's instinct to use Tampermonkey was good — it's fast to prototype and can
 
 ## Feature Breakdown
 
-### Profile & Data Management
+### Ptah's Forge — Profile & Data Management
 
 - **Multi-Profile System** - Each user has their own profile with personal info, work history, education, skills, certifications. Support for multiple resume 'variants' per user — like a 'Data Analytics' resume vs an 'HR' resume vs a 'General' resume. Each variant stores different emphasis, bullet points, and summary text.
 
-- **Template Engine** - Structured templates for: resume content blocks (summary, experience entries, education entries, skills lists), cover letter bases with merge fields ({company_name}, {role_title}, {specific_skill}), reference sheets with 3-5 references per template, common Q&A answers (like 'are you authorized to work in the US', salary expectations, start date, etc.).
+- **Template Engine** - Ptah's toolkit: structured templates for resume content blocks (summary, experience entries, education entries, skills lists), cover letter bases with merge fields ({company_name}, {role_title}, {specific_skill}), reference sheets with 3-5 references per template, common Q&A answers (like 'are you authorized to work in the US', salary expectations, start date, etc.).
 
 - **Document Storage** - Store actual PDF/DOCX files of your polished resumes and cover letters ready for upload. Tag them by role type, date, version. One-click copy to clipboard for any text field.
 
 - **Smart Snippets** - Reusable text blocks for common application questions. 'Tell us about a time you led a team' — have 3-4 versions ready to go. Searchable by keyword and taggable by competency area.
 
-### Browser Autofill Engine
+### Horus's Eye — Browser Autofill Engine
 
-- **ATS Detection** - Automatically detects which ATS you're on based on URL patterns and DOM structure. Known patterns: myworkdayjobs.com, boards.greenhouse.io, jobs.lever.co, icims.com, recruiting.paylocity.com, workforcenow.adp.com, bamboohr.com, etc. Falls back to generic form detection for unknown sites.
+- **Wadjet's Gaze (ATS Detection)** - Automatically detects which ATS you're on based on URL patterns and DOM structure. Known patterns: myworkdayjobs.com, boards.greenhouse.io, jobs.lever.co, icims.com, recruiting.paylocity.com, workforcenow.adp.com, bamboohr.com, etc. Falls back to generic form detection for unknown sites.
 
-- **Intelligent Field Mapping** - Reads form field labels, placeholders, aria-labels, and nearby text to determine what data goes where. Uses a priority system: exact CSS selector match → label text match → fuzzy match → ask the user. Handles dropdowns (country, state), date pickers, radio buttons, checkboxes, file upload fields, and rich text editors.
+- **Intelligent Field Mapping (Ma'at's Judgment)** - Reads form field labels, placeholders, aria-labels, and nearby text to determine what data goes where. Ma'at weighs each field using a priority system: exact CSS selector match → label text match → fuzzy match → ask the user. Handles dropdowns (country, state), date pickers, radio buttons, checkboxes, file upload fields, and rich text editors.
 
-- **Controlled Input Handling** - The hardest technical challenge. React-based ATS forms (like Workday) use controlled inputs where simply setting .value doesn't work. The extension must trigger the correct React synthetic events (onChange, onBlur, onInput) by finding the React fiber node and dispatching events properly. Each ATS needs its own adapter for this.
+- **Controlled Input Handling (The React Challenge)** - The hardest technical challenge. React-based ATS forms (like Workday) use controlled inputs where simply setting .value doesn't work. Horus must trigger the correct React synthetic events (onChange, onBlur, onInput) by finding the React fiber node and dispatching events properly. Each ATS needs its own adapter for this.
 
 - **Multi-Step Form Navigation** - Tracks your progress through multi-page applications. Remembers which fields you've filled on each step. Can auto-advance to the next page after filling (optional). Handles the common pattern of 'upload resume → parse → show pre-filled form → correct errors'.
 
 - **File Upload Automation** - Automatically selects the right resume/cover letter PDF from your stored documents when it detects a file upload field. Uses the DataTransfer API to programmatically set files on input[type=file] elements.
 
-### Application Tracker
+### Seshat's Scrolls — Application Tracker
 
-- **Auto-Logging** - When you complete an application through the extension, it automatically logs: company name, job title, URL, ATS platform, date applied, which resume/cover letter version was used, salary listed (if any), and any notes you add.
+- **Auto-Logging** - When you complete an application through Horus, Seshat automatically records: company name, job title, URL, ATS platform, date applied, which resume/cover letter version was used, salary listed (if any), and any notes you add.
 
 - **Status Pipeline** - Kanban-style board: Bookmarked → Applied → Phone Screen → Interview → Offer → Rejected → Withdrawn. Drag and drop to update status. Color-coded by age (green = fresh, yellow = been a while, red = stale).
 
 - **Spreadsheet Export** - One-click export to CSV/XLSX with all tracked applications. Columns: Company, Title, Location, Date Applied, Status, Resume Used, URL, Notes, Days Since Applied.
 
-- **Daily Goals & Stats** - Set a daily application target (e.g., 10/day). Dashboard shows: applications this week, response rate, average time per application, most-used resume variant, ATS platforms encountered.
+- **Daily Goals & Stats** - Set a daily application target (e.g., 10/day). Seshat's dashboard shows: applications this week, response rate, average time per application, most-used resume variant, ATS platforms encountered.
 
 ### Job Discovery & Alerts
 
-- **Unified Job Feed** - Aggregate job listings from LinkedIn, Indeed, and Glassdoor RSS/API feeds into one view within the desktop app. Filter by title keywords, location, salary range, remote/hybrid/onsite, and date posted.
+- **Unified Job Feed** - Aggregate job listings from LinkedIn, Indeed, and Glassdoor RSS/API feeds into one view within Ra's throne room. Filter by title keywords, location, salary range, remote/hybrid/onsite, and date posted.
 
 - **ATS Direct Search** - Search ATS platforms directly using the URL patterns: site:boards.greenhouse.io 'data analyst' 'Chicago'. Built-in Google search templates for each major ATS. Find jobs that never make it to LinkedIn.
 
 - **Duplicate Detection** - Flags jobs you've already applied to or bookmarked, even if they appear on a different job board. Uses company name + title fuzzy matching.
 
-### Quality of Life
+### Bes's Household — Quality of Life
 
-- **Credential Vault** - Encrypted storage for ATS login credentials. Auto-fill login forms when you land on a platform you've used before. Master password protected. Note: this is convenience, not a replacement for a proper password manager — but it prevents the 'which email did I use for Workday?' problem.
+- **Serket's Vault (Credential Vault)** - Encrypted storage for ATS login credentials. Serket's venom protects against intruders while you access your credentials. Auto-fill login forms when you land on a platform you've used before. Master password protected. Note: this is convenience, not a replacement for a proper password manager — but it prevents the 'which email did I use for Workday?' problem.
 
-- **Cover Letter Assembler** - Template-based cover letter builder. Pick a base template, it auto-fills company name and role. You customize 1-2 paragraphs explaining your specific fit. Saves the assembled version linked to that application.
+- **Thoth's Scriptorium (Cover Letter Assembler)** - Template-based cover letter builder. Thoth, god of wisdom and writing, weaves your words into persuasion. Pick a base template, it auto-fills company name and role. You customize 1-2 paragraphs explaining your specific fit. Saves the assembled version linked to that application.
 
-- **Quick-Copy Floating Panel** - When the extension is active, a small floating panel appears in the browser with one-click copy buttons for: phone number, email, LinkedIn URL, address, and any custom snippets. No more switching tabs to find your own info.
+- **Bes's Helper (Quick-Copy Floating Panel)** - When Horus is active, Bes appears as a small floating panel in the browser with one-click copy buttons for: phone number, email, LinkedIn URL, address, and any custom snippets. The helpful household god is always near at hand — no more switching tabs to find your own info.
 
-- **Undo / Review Before Submit** - After autofilling, the extension highlights all filled fields in a subtle color so you can review everything before hitting submit. An 'undo all' button restores the form to its pre-fill state.
+- **Undo / Review Before Submit** - After Horus autofills, all filled fields are highlighted in a subtle golden color so you can review everything before hitting submit. An 'undo all' button restores the form to its pre-fill state.
 
 ---
 
@@ -170,14 +212,14 @@ Priority targets based on market share and likelihood of encountering them. Henr
 
 ## Tech Stack
 
-| Layer | Choice | Language | Rationale |
-|-------|--------|----------|-----------|
-| Desktop App Shell | Tauri v2 | Rust | Henry wants Rust — Tauri delivers. 95% smaller than Electron, native OS integration, compiles to a tiny Windows .exe. The Rust backend handles all data storage, local API server, and file management. |
-| Desktop Frontend | React + Vite | TypeScript | Runs inside Tauri's webview. Handles the profile manager, template editor, application tracker dashboard, and settings. Could also use Svelte or SolidJS if Henry prefers. |
-| Database | SQLite (via rusqlite) | SQL | Single file, no server needed, perfect for a local desktop app. Stores profiles, templates, mappings, application history. Encrypted with SQLCipher for multi-user security. |
-| Local API | Actix-web or Axum | Rust | Runs a tiny HTTP server on localhost:9741 that the browser extension calls to fetch profile data, save applications, and get templates. Tauri can embed this in its backend. |
-| Browser Extension | Chrome Extension (Manifest V3) | TypeScript | Content scripts for DOM manipulation, background service worker for ATS detection, popup UI for quick actions. Communicates with the Tauri app over localhost HTTP. |
-| Field Detection | Custom DOM traversal + heuristics | TypeScript | No ML needed initially. Pattern matching on label text, input names, aria-labels, and CSS classes. A decision tree that classifies fields into resume data categories. Can add ML later if needed. |
+| Layer | Egyptian Name | Choice | Language | Rationale |
+|-------|---------------|--------|----------|-----------|
+| Desktop App Shell | **Ra** | Tauri v2 | Rust | Henry wants Rust — Tauri delivers. 95% smaller than Electron, native OS integration, compiles to a tiny Windows .exe. The Rust backend handles all data storage, local API server, and file management. |
+| Desktop Frontend | **Ra's Throne** | React + Vite | TypeScript | Runs inside Tauri's webview. Handles the profile manager, template editor, application tracker dashboard, and settings. Could also use Svelte or SolidJS if Henry prefers. |
+| Database | **Ptah's Vault** | SQLite (via rusqlite) | SQL | Single file, no server needed, perfect for a local desktop app. Stores profiles, templates, mappings, application history. Encrypted with SQLCipher for multi-user security. |
+| Local API | **Hapi's Flow** | Actix-web or Axum | Rust | Runs a tiny HTTP server on localhost:9741 that Horus calls to fetch profile data, save applications, and get templates. Tauri can embed this in its backend. |
+| Browser Extension | **Horus** | Chrome Extension (Manifest V3) | TypeScript | Content scripts for DOM manipulation, background service worker for ATS detection, popup UI for quick actions. Communicates with Ra over localhost HTTP. |
+| Field Detection | **Ma'at's Scale** | Custom DOM traversal + heuristics | TypeScript | No ML needed initially. Pattern matching on label text, input names, aria-labels, and CSS classes. A decision tree that classifies fields into resume data categories. Can add ML later if needed. |
 
 ---
 
@@ -186,22 +228,22 @@ Priority targets based on market share and likelihood of encountering them. Henr
 ### Phase 1 — Foundation
 *Time: 2-3 weeks*
 
-- Set up Tauri v2 project with React frontend
-- Design and implement SQLite schema for profiles, templates, application history
+- Set up **Ra** (Tauri v2) project with React frontend
+- Design and implement **Ptah's Vault** (SQLite schema) for profiles, templates, application history
 - Build profile CRUD: personal info, work history, education, skills, references
 - Build template manager: create/edit/tag resume content blocks
-- Local API server on localhost:9741 with basic endpoints
-- Basic Chrome extension scaffold with popup and content script
+- Set up **Hapi's Flow** (local API) on localhost:9741 with basic endpoints
+- Build **Horus** scaffold with Chrome extension popup and content script
 
 ### Phase 2 — Core Autofill
 *Time: 3-4 weeks*
 
-- ATS detection engine (URL pattern matching)
+- Build **Wadjet's Gaze** (ATS detection engine) with URL pattern matching
 - Generic form field scanner and classifier
 - Greenhouse adapter (easiest ATS to start with)
 - BambooHR adapter (second easiest)
 - Lever adapter
-- Floating sidebar UI in browser for field selection and fill control
+- Floating sidebar UI in browser (Horus's perch) for field selection and fill control
 - File upload automation for resume/cover letter PDFs
 
 ### Phase 3 — Hard Mode
@@ -263,5 +305,9 @@ Built as a framework reference for Henry. Key open-source references:
 - **Job App Filler** (Workday adapter patterns)
 - **Autofill-Jobs** (Greenhouse/Lever/Workday)
 - **AI-Job-Autofill** (multi-ATS with AI)
+
+---
+
+> "May Ra light your path, Horus guide your applications, and Ma'at weigh your resume in balance. The gods of DizzyResume stand ready to serve."
 
 All stored locally, all private, all yours.
