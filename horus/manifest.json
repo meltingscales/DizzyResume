@@ -51,17 +51,6 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Horus — DizzyResume",
-    "default_icon": {
-      "16": "icons/horus-16.png",
-      "48": "icons/horus-48.png",
-      "128": "icons/horus-128.png"
-    }
-  },
-
-  "icons": {
-    "16": "icons/horus-16.png",
-    "48": "icons/horus-48.png",
-    "128": "icons/horus-128.png"
+    "default_title": "Horus — DizzyResume"
   }
 }
