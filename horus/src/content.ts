@@ -3,7 +3,7 @@
 /// Ma'at's Judgment: scans form fields, classifies them, fills them with
 /// profile data. Bes's Panel: injects the floating quick-fill sidebar.
 
-import type { Profile, ResumeVariant, DetectedField, FieldCategory } from './types';
+import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
 import { detectAts } from './ats/detect';
 
 // ── Field classification ──────────────────────────────────────────────────────
@@ -318,8 +318,12 @@ function createBesPanel(ats: string): HTMLElement {
     " disabled>Fill All Fields</button>
     <button id="horus-undo-btn" style="
       width:100%;padding:6px;background:transparent;color:#888;border:1px solid #333;
-      border-radius:6px;cursor:pointer;font-size:12px;
+      border-radius:6px;cursor:pointer;font-size:12px;margin-bottom:6px;
     ">Undo Fill</button>
+    <button id="horus-snippet-btn" style="
+      width:100%;padding:6px;background:transparent;color:#f5a623;border:1px solid #f5a623;
+      border-radius:6px;cursor:pointer;font-size:12px;
+    ">Choose Snippet</button>
     <div id="horus-filled-count" style="text-align:center;font-size:11px;color:#888;margin-top:6px;"></div>
   `;
 
@@ -345,6 +349,102 @@ function createBesPanel(ats: string): HTMLElement {
   return panel;
 }
 
+// ── Snippet modal ─────────────────────────────────────────────────────────────
+
+async function openSnippetModal(): Promise<void> {
+  // Remove any existing modal
+  document.getElementById('horus-snippet-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'horus-snippet-modal';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 2147483646;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: #1a1a2e; border: 1px solid #f5a623; border-radius: 12px;
+    width: 480px; max-height: 70vh; display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6); color: #fff;
+  `;
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #333;flex-shrink:0;">
+      <span style="font-weight:600;color:#f5a623;font-size:14px;">☀️ Choose Snippet</span>
+      <button id="horus-snippet-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:18px;line-height:1;padding:0;">×</button>
+    </div>
+    <div id="horus-snippet-list" style="overflow-y:auto;padding:12px;flex:1;">
+      <div style="color:#888;font-size:12px;text-align:center;padding:24px;">Loading…</div>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  modal.querySelector('#horus-snippet-close')?.addEventListener('click', () => overlay.remove());
+
+  // Fetch snippets from Ra
+  const listEl = modal.querySelector<HTMLElement>('#horus-snippet-list')!;
+  try {
+    const snippets: Snippet[] = await fetch('http://127.0.0.1:9741/snippets').then((r) => r.json());
+
+    if (snippets.length === 0) {
+      listEl.innerHTML = `<div style="color:#888;font-size:12px;text-align:center;padding:24px;">No snippets yet — create some in Ra.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = '';
+    for (const snippet of snippets) {
+      const row = document.createElement('div');
+      row.style.cssText = `
+        display:flex; align-items:flex-start; gap:10px; padding:10px;
+        border-radius:8px; margin-bottom:6px; background:#0d0d1a;
+        border:1px solid #222;
+      `;
+
+      const tags = snippet.tags.length
+        ? snippet.tags.map((t: string) => `<span style="background:#f5a62322;color:#f5a623;border-radius:4px;padding:1px 6px;font-size:10px;">${t}</span>`).join(' ')
+        : '';
+
+      row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:12px;margin-bottom:2px;">${snippet.title}</div>
+          ${tags ? `<div style="margin-bottom:4px;">${tags}</div>` : ''}
+          <div style="font-size:11px;color:#888;white-space:pre-wrap;max-height:60px;overflow:hidden;">${snippet.content.slice(0, 120)}${snippet.content.length > 120 ? '…' : ''}</div>
+        </div>
+        <button data-id="${snippet.id}" data-content="${encodeURIComponent(snippet.content)}" style="
+          flex-shrink:0;padding:6px 10px;background:#f5a623;color:#000;border:none;
+          border-radius:6px;font-weight:600;cursor:pointer;font-size:11px;white-space:nowrap;
+        ">Copy</button>
+      `;
+
+      const copyBtn = row.querySelector<HTMLButtonElement>('button[data-content]')!;
+      copyBtn.addEventListener('click', async () => {
+        const text = decodeURIComponent(copyBtn.dataset.content!);
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = '#4caf50';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+          copyBtn.style.background = '#f5a623';
+        }, 1500);
+        // Record use in Ra
+        fetch(`http://127.0.0.1:9741/snippets/${copyBtn.dataset.id}/use`, { method: 'POST' }).catch(() => {});
+      });
+
+      listEl.appendChild(row);
+    }
+  } catch {
+    listEl.innerHTML = `<div style="color:#e57373;font-size:12px;text-align:center;padding:24px;">Could not reach Ra. Is it running?</div>`;
+  }
+}
+
 function updateBesPanel(
   profile: Profile | null,
   variant: ResumeVariant | null,
@@ -354,6 +454,7 @@ function updateBesPanel(
   const statusEl = besPanel.querySelector<HTMLElement>('#horus-status');
   const fillBtn = besPanel.querySelector<HTMLButtonElement>('#horus-fill-btn');
   const undoBtn = besPanel.querySelector<HTMLButtonElement>('#horus-undo-btn');
+  const snippetBtn = besPanel.querySelector<HTMLButtonElement>('#horus-snippet-btn');
   const countEl = besPanel.querySelector<HTMLElement>('#horus-filled-count');
 
   if (!profile) {
@@ -382,6 +483,8 @@ function updateBesPanel(
     if (countEl) countEl.textContent = `${n} field${n !== 1 ? 's' : ''} filled`;
     if (undoBtn) undoBtn.style.color = '#fff';
   });
+
+  snippetBtn?.addEventListener('click', () => { openSnippetModal(); });
 
   undoBtn?.addEventListener('click', () => {
     for (const { el, style, value } of savedValues) {

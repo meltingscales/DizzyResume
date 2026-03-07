@@ -235,6 +235,21 @@ async fn list_templates(State(db): State<Database>) -> ApiResult<Vec<Template>> 
     Ok(Json(rows))
 }
 
+// POST /snippets/:id/use — Horus records a snippet copy
+async fn record_snippet_use(
+    State(db): State<Database>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    let conn = db.0.lock().unwrap();
+    let now = now();
+    conn.execute(
+        "UPDATE snippets SET use_count=use_count+1, updated_at=?1 WHERE id=?2",
+        rusqlite::params![now, id],
+    )
+    .map_err(err500)?;
+    Ok(Json(json!({ "ok": true })))
+}
+
 // POST /applications — Horus calls this when a form is successfully submitted
 async fn create_application(
     State(db): State<Database>,
@@ -335,6 +350,7 @@ pub async fn serve(db: Database) {
         .route("/profiles/:id", get(get_profile))
         .route("/profiles/:id/variants", get(list_variants))
         .route("/snippets", get(list_snippets))
+        .route("/snippets/:id/use", post(record_snippet_use))
         .route("/templates", get(list_templates))
         .route("/applications", post(create_application))
         .route("/applications/:id/status", patch(update_application_status))
