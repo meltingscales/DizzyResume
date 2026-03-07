@@ -6,9 +6,10 @@ interface TemplateCardProps {
   Icon: LucideIcon;
   onEdit?: () => void;
   onDelete?: () => void;
+  onAssemble?: () => void;
 }
 
-export function TemplateCard({ template, Icon, onEdit, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, Icon, onEdit, onDelete, onAssemble }: TemplateCardProps) {
   const timeAgo = (isoString?: string | null) => {
     if (!isoString) return 'Never';
     const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -33,7 +34,11 @@ export function TemplateCard({ template, Icon, onEdit, onDelete }: TemplateCardP
           <button onClick={onEdit} className="p-2 hover:bg-secondary rounded-md transition-colors" title="Edit">
             <Edit className="w-4 h-4" />
           </button>
-          <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Use">
+          <button
+            onClick={onAssemble}
+            className="p-2 hover:bg-secondary rounded-md transition-colors"
+            title="Assemble"
+          >
             <Play className="w-4 h-4" />
           </button>
           {onDelete && (

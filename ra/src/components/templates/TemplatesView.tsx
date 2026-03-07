@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, FileEdit, Users, MessageSquare, Loader2, type LucideIcon } from 'lucide-react';
 import { TemplateCard } from '../ui/TemplateCard';
 import { TemplateModal } from './TemplateModal';
+import { TemplateAssembleModal } from './TemplateAssembleModal';
 import { api } from '../../lib/api';
 import type { Template } from '../../types';
 
@@ -18,6 +19,7 @@ export function TemplatesView() {
   const [filterType, setFilterType] = useState('all');
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<{ open: boolean; template?: Template }>({ open: false });
+  const [assembling, setAssembling] = useState<Template | null>(null);
 
   useEffect(() => {
     api.templates
@@ -111,6 +113,7 @@ export function TemplatesView() {
               Icon={typeIcons[template.type] ?? FileEdit}
               onEdit={() => setModal({ open: true, template })}
               onDelete={() => handleDelete(template.id)}
+              onAssemble={() => setAssembling(template)}
             />
           ))}
 
@@ -130,6 +133,13 @@ export function TemplatesView() {
           template={modal.template}
           onClose={() => setModal({ open: false })}
           onSave={handleSave}
+        />
+      )}
+
+      {assembling && (
+        <TemplateAssembleModal
+          template={assembling}
+          onClose={() => setAssembling(null)}
         />
       )}
     </div>
