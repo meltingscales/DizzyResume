@@ -1,4 +1,4 @@
-import { d as detectAts } from "./assets/detect-CZ1xkSc2.js";
+import { d as detectAts } from "./assets/detect-C29rGrdD.js";
 import { r as raApi } from "./assets/api-DnzFSuXz.js";
 let raConnected = false;
 async function checkRa() {

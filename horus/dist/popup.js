@@ -1,5 +1,5 @@
 import { r as raApi } from "./assets/api-DnzFSuXz.js";
-import { d as detectAts } from "./assets/detect-CZ1xkSc2.js";
+import { S as SUPPORTED_PLATFORMS, d as detectAts } from "./assets/detect-C29rGrdD.js";
 const raDot = document.getElementById("ra-dot");
 const raStatus = document.getElementById("ra-status");
 const atsInfo = document.getElementById("ats-info");
@@ -8,6 +8,9 @@ const variantSelect = document.getElementById("variant-select");
 const fillBtn = document.getElementById("fill-btn");
 const undoBtn = document.getElementById("undo-btn");
 const fillResult = document.getElementById("fill-result");
+const atsHelpBtn = document.getElementById("ats-help-btn");
+const supportPanel = document.getElementById("support-panel");
+const supportList = document.getElementById("support-list");
 let profiles = [];
 let variants = [];
 let raConnected = false;
@@ -60,11 +63,14 @@ async function detectCurrentAts() {
   const ats = detectAts(tab.url);
   if (ats) {
     currentAts = ats.name;
+    atsInfo.className = "";
     atsInfo.innerHTML = `<span class="ats-badge">${ats.name}</span> <span style="color:#666;font-size:11px;">${ats.difficulty}</span>`;
+    setAtsHelpVisibility(true);
   } else {
     currentAts = null;
     atsInfo.className = "no-ats";
     atsInfo.textContent = "Not a recognised ATS page";
+    setAtsHelpVisibility(false);
   }
 }
 function updateFillButton() {
@@ -128,6 +134,24 @@ variantSelect.addEventListener("change", async () => {
   await chrome.storage.local.set({ activeVariantId: variantSelect.value });
   updateFillButton();
 });
+for (const platform of SUPPORTED_PLATFORMS) {
+  const item = document.createElement("div");
+  item.className = "support-item";
+  item.innerHTML = `
+    <span>${platform.name}</span>
+    <span class="diff-badge diff-${platform.difficulty}">${platform.difficulty}</span>
+  `;
+  supportList.appendChild(item);
+}
+atsHelpBtn.addEventListener("click", () => {
+  const isOpen = supportPanel.classList.toggle("open");
+  atsHelpBtn.style.color = isOpen ? "#f5a623" : "";
+  atsHelpBtn.style.borderColor = isOpen ? "#f5a623" : "";
+});
+function setAtsHelpVisibility(atsDetected) {
+  atsHelpBtn.style.display = atsDetected ? "none" : "";
+  if (atsDetected) supportPanel.classList.remove("open");
+}
 await Promise.all([connectToRa(), detectCurrentAts()]);
 updateFillButton();
 //# sourceMappingURL=popup.js.map

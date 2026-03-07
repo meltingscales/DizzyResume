@@ -57,6 +57,10 @@ const ATS_PATTERNS: Array<{ pattern: RegExp; platform: AtsPlatform }> = [
   },
 ];
 
+/// All supported platforms — used by the popup help panel.
+/// Derived from ATS_PATTERNS so it stays in sync automatically.
+export const SUPPORTED_PLATFORMS: AtsPlatform[] = ATS_PATTERNS.map((e) => e.platform);
+
 export function detectAts(url: string): AtsPlatform | null {
   for (const { pattern, platform } of ATS_PATTERNS) {
     if (pattern.test(url)) return platform;

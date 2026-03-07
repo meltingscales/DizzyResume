@@ -99,6 +99,64 @@
       }
       .no-ats { color: #555; font-style: italic; }
 
+      .help-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 15px; height: 15px;
+        border-radius: 50%;
+        border: 1px solid #444;
+        background: transparent;
+        color: #666;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-left: 5px;
+        vertical-align: middle;
+        line-height: 1;
+        transition: border-color .15s, color .15s;
+      }
+      .help-btn:hover { border-color: #f5a623; color: #f5a623; }
+
+      .support-panel {
+        margin-top: 8px;
+        border: 1px solid #2a2a3e;
+        border-radius: 6px;
+        overflow: hidden;
+        display: none;
+      }
+      .support-panel.open { display: block; }
+      .support-panel-header {
+        padding: 6px 10px;
+        background: #13131f;
+        font-size: 11px;
+        color: #888;
+        border-bottom: 1px solid #2a2a3e;
+      }
+      .support-list {
+        max-height: 180px;
+        overflow-y: auto;
+        padding: 4px 0;
+      }
+      .support-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: #ccc;
+      }
+      .support-item:hover { background: #1a1a2e; }
+      .diff-badge {
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-weight: 600;
+      }
+      .diff-easy   { background: #22c55e22; color: #22c55e; }
+      .diff-medium { background: #eab30822; color: #eab308; }
+      .diff-hard   { background: #ef444422; color: #ef4444; }
+
       #fill-result {
         font-size: 11px;
         color: #22c55e;
@@ -131,7 +189,14 @@
     <!-- ATS detection -->
     <div class="section">
       <div class="section-label">Current Page</div>
-      <div id="ats-info" class="no-ats">Not an ATS page</div>
+      <div style="display:flex;align-items:center;gap:2px;">
+        <div id="ats-info" class="no-ats">Not a recognised ATS page</div>
+        <button class="help-btn" id="ats-help-btn" title="Show supported ATS platforms">?</button>
+      </div>
+      <div class="support-panel" id="support-panel">
+        <div class="support-panel-header">Supported ATS platforms</div>
+        <div class="support-list" id="support-list"></div>
+      </div>
     </div>
 
     <!-- Profile & variant selection -->

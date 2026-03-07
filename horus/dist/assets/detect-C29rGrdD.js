@@ -48,6 +48,7 @@ const ATS_PATTERNS = [
     platform: { id: "jazzhr", name: "JazzHR", difficulty: "easy" }
   }
 ];
+const SUPPORTED_PLATFORMS = ATS_PATTERNS.map((e) => e.platform);
 function detectAts(url) {
   for (const { pattern, platform } of ATS_PATTERNS) {
     if (pattern.test(url)) return platform;
@@ -55,6 +56,7 @@ function detectAts(url) {
   return null;
 }
 export {
+  SUPPORTED_PLATFORMS as S,
   detectAts as d
 };
-//# sourceMappingURL=detect-CZ1xkSc2.js.map
+//# sourceMappingURL=detect-C29rGrdD.js.map
