@@ -359,7 +359,7 @@
   `;
     panel.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-weight:600;color:#f5a623;">☀️ Horus</span>
+      <span style="font-weight:600;color:#f5a623;">☀️ Horus (Bes Panel)</span>
       <span style="font-size:11px;color:#888;">${ats}</span>
       <button id="horus-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;padding:0;line-height:1;">×</button>
     </div>
