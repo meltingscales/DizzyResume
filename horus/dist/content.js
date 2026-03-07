@@ -383,7 +383,9 @@
     document.addEventListener("mousemove", (e) => {
       if (!dragging) return;
       const delta = e.clientY - startY;
-      panel.style.top = `${startTop + delta}px`;
+      const newTop = startTop + delta;
+      const maxTop = window.innerHeight - panel.offsetHeight;
+      panel.style.top = `${Math.max(0, Math.min(newTop, maxTop))}px`;
       panel.style.transform = "none";
     });
     document.addEventListener("mouseup", () => {
