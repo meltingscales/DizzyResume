@@ -94,7 +94,7 @@ export interface HorusState {
 }
 
 export interface DetectedField {
-  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  element: HTMLElement;
   label: string;
   category: FieldCategory;
   confidence: 'high' | 'medium' | 'low';

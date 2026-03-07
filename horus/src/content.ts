@@ -44,7 +44,7 @@ const FIELD_PATTERNS: Array<{ category: FieldCategory; patterns: RegExp[] }> = [
   },
   {
     category: 'state',
-    patterns: [/^state$|province|region/i],
+    patterns: [/\bstate\b|province|region/i],
   },
   {
     category: 'zip',
@@ -92,7 +92,7 @@ function getFieldLabel(el: HTMLElement): string {
   return el.getAttribute('name') ?? el.id ?? '';
 }
 
-function classifyField(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): {
+function classifyField(el: HTMLElement): {
   category: FieldCategory;
   confidence: 'high' | 'medium' | 'low';
 } {
@@ -115,24 +115,29 @@ function classifyField(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectEl
   if (el instanceof HTMLTextAreaElement) {
     return { category: 'cover_letter', confidence: 'low' };
   }
+  // ARIA listbox buttons with no other matches are unknown
+  if (el instanceof HTMLButtonElement && el.getAttribute('aria-haspopup') === 'listbox') {
+    return { category: 'unknown', confidence: 'low' };
+  }
 
   return { category: 'unknown', confidence: 'low' };
 }
 
 function scanFields(): DetectedField[] {
-  const selectors = 'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]), textarea, select';
-  const elements = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selectors));
+  // Also capture ARIA listbox buttons (Workday-style custom dropdowns)
+  const selectors = [
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"])',
+    'textarea',
+    'select',
+    'button[aria-haspopup="listbox"]',
+  ].join(', ');
+  const elements = Array.from(document.querySelectorAll<HTMLElement>(selectors));
 
   return elements
     .filter((el) => el.offsetParent !== null) // visible only
     .map((el) => {
       const { category, confidence } = classifyField(el);
-      return {
-        element: el,
-        label: getFieldLabel(el),
-        category,
-        confidence,
-      };
+      return { element: el, label: getFieldLabel(el), category, confidence };
     })
     .filter((f) => f.category !== 'unknown');
 }
@@ -182,35 +187,64 @@ function nativeInputSetter(el: HTMLInputElement | HTMLTextAreaElement, value: st
   el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
 }
 
-function fillField(field: DetectedField, value: string): void {
-  if (!value) return;
+/** Click open an ARIA listbox button and pick the matching option. */
+async function fillAriaListbox(el: HTMLElement, value: string): Promise<boolean> {
+  el.click();
+  // Wait for the listbox / options to render
+  await new Promise((r) => setTimeout(r, 350));
+
+  const options = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
+  const match = options.find(
+    (o) => o.textContent?.trim().toLowerCase() === value.toLowerCase()
+  );
+  if (match) {
+    match.click();
+    return true;
+  }
+  // No match — close without selecting
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  return false;
+}
+
+async function fillField(field: DetectedField, value: string): Promise<boolean> {
+  if (!value) return false;
 
   const el = field.element;
+
+  if (el instanceof HTMLButtonElement && el.getAttribute('aria-haspopup') === 'listbox') {
+    const ok = await fillAriaListbox(el, value);
+    if (ok) {
+      el.style.outline = '2px solid #f5a623';
+      el.style.outlineOffset = '2px';
+    }
+    return ok;
+  }
+
   if (el instanceof HTMLSelectElement) {
-    // Try to match by value or text
     const option = Array.from(el.options).find(
       (o) => o.value.toLowerCase() === value.toLowerCase() || o.text.toLowerCase() === value.toLowerCase()
     );
     if (option) {
       el.value = option.value;
       el.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      return false;
     }
   } else {
-    nativeInputSetter(el, value);
+    nativeInputSetter(el as HTMLInputElement | HTMLTextAreaElement, value);
   }
 
-  // Highlight filled field with a subtle golden outline
   el.style.outline = '2px solid #f5a623';
   el.style.outlineOffset = '2px';
+  return true;
 }
 
-function fillAll(profile: Profile, variant?: ResumeVariant): number {
+async function fillAll(profile: Profile, variant?: ResumeVariant): Promise<number> {
   const fields = scanFields();
   let filled = 0;
   for (const field of fields) {
     const value = profileValueFor(field.category, profile, variant);
-    if (value) {
-      fillField(field, value);
+    if (value && await fillField(field, value)) {
       filled++;
     }
   }
@@ -305,15 +339,17 @@ function updateBesPanel(
   // Store previous values for undo
   let savedValues: Array<{ el: HTMLElement; style: string; value: string }> = [];
 
-  fillBtn?.addEventListener('click', () => {
+  fillBtn?.addEventListener('click', async () => {
+    if (fillBtn) fillBtn.disabled = true;
     // Save current state for undo
     savedValues = scanFields().map((f) => ({
       el: f.element,
       style: f.element.style.outline,
-      value: (f.element as HTMLInputElement).value,
+      value: (f.element as HTMLInputElement).value ?? '',
     }));
 
-    const n = fillAll(profile, variant ?? undefined);
+    const n = await fillAll(profile, variant ?? undefined);
+    if (fillBtn) fillBtn.disabled = false;
     if (countEl) countEl.textContent = `${n} field${n !== 1 ? 's' : ''} filled`;
     if (undoBtn) undoBtn.style.color = '#fff';
   });
@@ -395,7 +431,7 @@ if (document.readyState === 'loading') {
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.type === 'FILL_FIELDS') {
     const { profile, variant } = msg;
-    const n = fillAll(profile, variant);
-    reply({ filled: n });
+    fillAll(profile, variant).then((n) => reply({ filled: n }));
+    return true; // keep message channel open for async reply
   }
 });

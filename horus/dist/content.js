@@ -92,7 +92,7 @@
     },
     {
       category: "state",
-      patterns: [/^state$|province|region/i]
+      patterns: [/\bstate\b|province|region/i]
     },
     {
       category: "zip",
@@ -151,19 +151,22 @@
     if (el instanceof HTMLTextAreaElement) {
       return { category: "cover_letter", confidence: "low" };
     }
+    if (el instanceof HTMLButtonElement && el.getAttribute("aria-haspopup") === "listbox") {
+      return { category: "unknown", confidence: "low" };
+    }
     return { category: "unknown", confidence: "low" };
   }
   function scanFields() {
-    const selectors = 'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]), textarea, select';
+    const selectors = [
+      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"])',
+      "textarea",
+      "select",
+      'button[aria-haspopup="listbox"]'
+    ].join(", ");
     const elements = Array.from(document.querySelectorAll(selectors));
     return elements.filter((el) => el.offsetParent !== null).map((el) => {
       const { category, confidence } = classifyField(el);
-      return {
-        element: el,
-        label: getFieldLabel(el),
-        category,
-        confidence
-      };
+      return { element: el, label: getFieldLabel(el), category, confidence };
     }).filter((f) => f.category !== "unknown");
   }
   function profileValueFor(category, profile, variant) {
@@ -217,9 +220,31 @@
     el.dispatchEvent(new Event("change", { bubbles: true }));
     el.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
   }
-  function fillField(field, value) {
-    if (!value) return;
+  async function fillAriaListbox(el, value) {
+    el.click();
+    await new Promise((r) => setTimeout(r, 350));
+    const options = Array.from(document.querySelectorAll('[role="option"]'));
+    const match = options.find(
+      (o) => o.textContent?.trim().toLowerCase() === value.toLowerCase()
+    );
+    if (match) {
+      match.click();
+      return true;
+    }
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return false;
+  }
+  async function fillField(field, value) {
+    if (!value) return false;
     const el = field.element;
+    if (el instanceof HTMLButtonElement && el.getAttribute("aria-haspopup") === "listbox") {
+      const ok = await fillAriaListbox(el, value);
+      if (ok) {
+        el.style.outline = "2px solid #f5a623";
+        el.style.outlineOffset = "2px";
+      }
+      return ok;
+    }
     if (el instanceof HTMLSelectElement) {
       const option = Array.from(el.options).find(
         (o) => o.value.toLowerCase() === value.toLowerCase() || o.text.toLowerCase() === value.toLowerCase()
@@ -227,20 +252,22 @@
       if (option) {
         el.value = option.value;
         el.dispatchEvent(new Event("change", { bubbles: true }));
+      } else {
+        return false;
       }
     } else {
       nativeInputSetter(el, value);
     }
     el.style.outline = "2px solid #f5a623";
     el.style.outlineOffset = "2px";
+    return true;
   }
-  function fillAll(profile, variant) {
+  async function fillAll(profile, variant) {
     const fields = scanFields();
     let filled = 0;
     for (const field of fields) {
       const value = profileValueFor(field.category, profile, variant);
-      if (value) {
-        fillField(field, value);
+      if (value && await fillField(field, value)) {
         filled++;
       }
     }
@@ -319,13 +346,15 @@
     if (statusEl) statusEl.textContent = `${profile.name} · ${variant?.name ?? "No variant"}`;
     if (fillBtn) fillBtn.disabled = false;
     let savedValues = [];
-    fillBtn?.addEventListener("click", () => {
+    fillBtn?.addEventListener("click", async () => {
+      if (fillBtn) fillBtn.disabled = true;
       savedValues = scanFields().map((f) => ({
         el: f.element,
         style: f.element.style.outline,
-        value: f.element.value
+        value: f.element.value ?? ""
       }));
-      const n = fillAll(profile, variant ?? void 0);
+      const n = await fillAll(profile, variant ?? void 0);
+      if (fillBtn) fillBtn.disabled = false;
       if (countEl) countEl.textContent = `${n} field${n !== 1 ? "s" : ""} filled`;
       if (undoBtn) undoBtn.style.color = "#fff";
     });
@@ -384,8 +413,8 @@
   chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     if (msg.type === "FILL_FIELDS") {
       const { profile, variant } = msg;
-      const n = fillAll(profile, variant);
-      reply({ filled: n });
+      fillAll(profile, variant).then((n) => reply({ filled: n }));
+      return true;
     }
   });
 })();
