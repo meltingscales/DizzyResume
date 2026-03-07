@@ -47,6 +47,45 @@ export function TrackerView() {
   const byStatus = (status: ApplicationStatus) =>
     applications.filter((a) => a.status === status);
 
+  const exportCsv = () => {
+    const headers = [
+      'Company', 'Title', 'Location', 'Status', 'ATS Platform',
+      'Date Applied', 'Days Since Applied', 'Salary Min', 'Salary Max',
+      'Job URL', 'Notes',
+    ];
+    const escape = (v: string | number | null | undefined) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const daysSince = (iso: string) =>
+      Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+
+    const rows = applications.map((a) => [
+      escape(a.company),
+      escape(a.title),
+      escape(a.location),
+      escape(a.status),
+      escape(a.ats_platform),
+      escape(a.applied_at ? new Date(a.applied_at).toLocaleDateString() : ''),
+      escape(a.applied_at ? daysSince(a.applied_at) : ''),
+      escape(a.salary_min),
+      escape(a.salary_max),
+      escape(a.job_url),
+      escape(a.notes),
+    ].join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const applied = applications.filter((a) => a.status !== 'bookmarked');
   const thisWeek = applied.filter((a) => {
     const days = (Date.now() - new Date(a.created_at).getTime()) / 86400000;
@@ -64,9 +103,13 @@ export function TrackerView() {
               Track your job applications across all stages
             </p>
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
+          <button
+            onClick={exportCsv}
+            disabled={applications.length === 0}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors disabled:opacity-50"
+          >
             <Download className="w-4 h-4" />
-            Export
+            Export CSV
           </button>
         </div>
 
