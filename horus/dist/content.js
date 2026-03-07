@@ -708,6 +708,22 @@
       if (submitArmed && isConfirmation) {
         submitArmed = false;
         setTimeout(() => openLogModal(ats, profileId, variantId), 800);
+        return;
+      }
+      if (!isConfirmation && besPanel) {
+        const statusEl = besPanel.querySelector("#horus-status");
+        const countEl = besPanel.querySelector("#horus-filled-count");
+        const fillBtn = besPanel.querySelector("#horus-fill-btn");
+        if (statusEl) statusEl.style.color = "#f5a623";
+        if (countEl) {
+          countEl.textContent = "↑ New step — click Fill All";
+          countEl.style.color = "#f5a623";
+        }
+        if (fillBtn) fillBtn.disabled = false;
+        fillBtn?.addEventListener("click", () => {
+          if (statusEl) statusEl.style.color = "";
+          if (countEl) countEl.style.color = "#888";
+        }, { once: true });
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });

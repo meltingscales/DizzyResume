@@ -706,12 +706,11 @@ function watchForSubmission(ats: string, profileId: string, variantId: string | 
     const text = btn.textContent?.trim() ?? '';
     if (/^(submit|apply now|complete application|submit application)$/i.test(text)) {
       submitArmed = true;
-      // Disarm after 30s if no confirmation page appears
       setTimeout(() => { submitArmed = false; }, 30_000);
     }
   }, true);
 
-  // Watch for navigation to a confirmation / thank-you page
+  // Watch for SPA navigation (Workday React Router between steps)
   let lastUrl = window.location.href;
   const observer = new MutationObserver(() => {
     if (window.location.href === lastUrl) return;
@@ -723,8 +722,27 @@ function watchForSubmission(ats: string, profileId: string, variantId: string | 
 
     if (submitArmed && isConfirmation) {
       submitArmed = false;
-      // Let the confirmation page render before scraping
       setTimeout(() => openLogModal(ats, profileId, variantId), 800);
+      return;
+    }
+
+    // Not a confirmation — must be a step transition. Prompt user to refill.
+    if (!isConfirmation && besPanel) {
+      const statusEl = besPanel.querySelector<HTMLElement>('#horus-status');
+      const countEl  = besPanel.querySelector<HTMLElement>('#horus-filled-count');
+      const fillBtn  = besPanel.querySelector<HTMLButtonElement>('#horus-fill-btn');
+      if (statusEl) statusEl.style.color = '#f5a623';
+      if (countEl) {
+        countEl.textContent = '↑ New step — click Fill All';
+        countEl.style.color = '#f5a623';
+      }
+      if (fillBtn) fillBtn.disabled = false;
+
+      // Reset count styling once user fills
+      fillBtn?.addEventListener('click', () => {
+        if (statusEl) statusEl.style.color = '';
+        if (countEl) countEl.style.color = '#888';
+      }, { once: true });
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
