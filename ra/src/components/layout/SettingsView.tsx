@@ -1,6 +1,34 @@
+import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 
+type ApiStatus = 'checking' | 'up' | 'down';
+
 export function SettingsView() {
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
+
+  const checkApi = () => {
+    setApiStatus('checking');
+    fetch('http://127.0.0.1:9741/health', { signal: AbortSignal.timeout(2000) })
+      .then((r) => setApiStatus(r.ok ? 'up' : 'down'))
+      .catch(() => setApiStatus('down'));
+  };
+
+  useEffect(() => {
+    checkApi();
+  }, []);
+
+  const statusDot = {
+    checking: 'bg-yellow-400 animate-pulse',
+    up: 'bg-green-500',
+    down: 'bg-red-500',
+  }[apiStatus];
+
+  const statusLabel = {
+    checking: 'Checking…',
+    up: 'Running on port 9741',
+    down: 'Not reachable — is Ra running?',
+  }[apiStatus];
+
   return (
     <div className="p-6 max-w-3xl">
       {/* Header */}
@@ -17,12 +45,10 @@ export function SettingsView() {
         </button>
       </div>
 
-      {/* Settings Sections */}
       <div className="space-y-6">
         {/* General Settings */}
         <section className="p-5 bg-card rounded-lg border border-border">
           <h2 className="text-lg font-semibold mb-4">General Settings</h2>
-
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -53,31 +79,35 @@ export function SettingsView() {
         {/* Horus Integration */}
         <section className="p-5 bg-card rounded-lg border border-border">
           <h2 className="text-lg font-semibold mb-4">Horus Integration</h2>
-
           <div className="space-y-4">
+            {/* Hapi's Flow status */}
             <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
               <div>
                 <p className="font-medium flex items-center gap-2">
-                  Local API Server
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Hapi's Flow — Local API
+                  <span className={`w-2 h-2 rounded-full ${statusDot}`} />
                 </p>
-                <p className="text-sm text-muted-foreground">Running on port 9741</p>
+                <p className="text-sm text-muted-foreground">{statusLabel}</p>
               </div>
-              <button className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
-                Restart
+              <button
+                onClick={checkApi}
+                className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+              >
+                {apiStatus === 'checking' ? 'Checking…' : 'Recheck'}
               </button>
             </div>
 
+            {/* Extension status — static until Horus is built */}
             <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
               <div>
                 <p className="font-medium flex items-center gap-2">
-                  Browser Extension
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Horus Browser Extension
+                  <span className="w-2 h-2 bg-muted-foreground/40 rounded-full" />
                 </p>
-                <p className="text-sm text-muted-foreground">Connected and active</p>
+                <p className="text-sm text-muted-foreground">Not yet installed</p>
               </div>
               <button className="px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
-                Configure
+                Install Guide
               </button>
             </div>
           </div>
@@ -86,7 +116,6 @@ export function SettingsView() {
         {/* Backup & Export */}
         <section className="p-5 bg-card rounded-lg border border-border">
           <h2 className="text-lg font-semibold mb-4">Backup & Export</h2>
-
           <div className="space-y-3">
             <button className="w-full flex items-center justify-between p-3 bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
               <span>Export All Data (JSON)</span>
@@ -98,7 +127,7 @@ export function SettingsView() {
             </button>
             <button className="w-full flex items-center justify-between p-3 bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
               <span>Backup Database</span>
-              <span className="text-sm text-muted-foreground">3 days ago</span>
+              <span className="text-sm text-muted-foreground">↓</span>
             </button>
           </div>
         </section>

@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod error;
 mod models;
+mod server;
 
 use commands::*;
 use tauri::Manager;
@@ -13,8 +14,17 @@ pub fn run() {
         .setup(|app| {
             let app_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&app_dir)?;
+
             let database = db::init(app_dir.join("ra.db"))
                 .expect("Failed to initialise Ptah's Vault (SQLite)");
+
+            // Spawn Hapi's Flow on Tauri's tokio runtime.
+            // The server gets its own clone of the Arc<Mutex<Connection>>.
+            let db_for_server = database.clone();
+            tauri::async_runtime::spawn(async move {
+                server::serve(db_for_server).await;
+            });
+
             app.manage(database);
             Ok(())
         })

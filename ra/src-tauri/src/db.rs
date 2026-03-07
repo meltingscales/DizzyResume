@@ -1,7 +1,10 @@
 use rusqlite::{Connection, Result};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
-pub struct Database(pub Mutex<Connection>);
+/// Shared database handle. Clone-able — both Tauri state and the Hapi HTTP
+/// server hold a reference to the same underlying connection through the Arc.
+#[derive(Clone)]
+pub struct Database(pub Arc<Mutex<Connection>>);
 
 const SCHEMA: &str = "
 PRAGMA foreign_keys = ON;
@@ -79,5 +82,5 @@ CREATE TABLE IF NOT EXISTS applications (
 pub fn init(path: impl AsRef<std::path::Path>) -> Result<Database> {
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
-    Ok(Database(Mutex::new(conn)))
+    Ok(Database(Arc::new(Mutex::new(conn))))
 }
