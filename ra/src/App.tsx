@@ -1,50 +1,49 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useState } from 'react';
+import { Sidebar } from './components/layout/Sidebar';
+import { ProfilesView } from './components/profiles/ProfilesView';
+import { TrackerView } from './components/tracker/TrackerView';
+import { TemplatesView } from './components/templates/TemplatesView';
+import { SettingsView } from './components/layout/SettingsView';
+import type { ViewId } from './types';
+import './App.css';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [currentView, setCurrentView] = useState<ViewId>('profiles');
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const renderView = () => {
+    switch (currentView) {
+      case 'profiles':
+        return <ProfilesView />;
+      case 'tracker':
+        return <TrackerView />;
+      case 'templates':
+        return <TemplatesView />;
+      case 'settings':
+        return <SettingsView />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">Coming soon...</p>
+          </div>
+        );
+    }
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+    <div className={isDarkMode ? 'dark' : ''}>
+      <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        <Sidebar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          isDarkMode={isDarkMode}
+          onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+        <main className="flex-1 overflow-auto scrollbar-thin">
+          {renderView()}
+        </main>
+      </div>
+    </div>
   );
 }
 
