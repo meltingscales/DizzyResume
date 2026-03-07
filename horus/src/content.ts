@@ -100,6 +100,11 @@ function classifyField(el: HTMLElement): {
   const name = (el.getAttribute('name') ?? '').toLowerCase();
   const id = el.id.toLowerCase();
 
+  // Phone extension fields contain "extension" in name/id — not a phone number
+  if (/extension/.test(name) || /extension/.test(id)) {
+    return { category: 'unknown', confidence: 'low' };
+  }
+
   for (const { category, patterns } of FIELD_PATTERNS) {
     for (const pattern of patterns) {
       if (pattern.test(label)) return { category, confidence: 'high' };

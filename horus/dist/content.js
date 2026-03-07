@@ -138,6 +138,9 @@
     const label = getFieldLabel(el).toLowerCase();
     const name = (el.getAttribute("name") ?? "").toLowerCase();
     const id = el.id.toLowerCase();
+    if (/extension/.test(name) || /extension/.test(id)) {
+      return { category: "unknown", confidence: "low" };
+    }
     for (const { category, patterns } of FIELD_PATTERNS) {
       for (const pattern of patterns) {
         if (pattern.test(label)) return { category, confidence: "high" };
