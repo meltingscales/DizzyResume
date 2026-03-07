@@ -220,6 +220,65 @@
     el.dispatchEvent(new Event("change", { bubbles: true }));
     el.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
   }
+  const US_STATES = {
+    AL: "Alabama",
+    AK: "Alaska",
+    AZ: "Arizona",
+    AR: "Arkansas",
+    CA: "California",
+    CO: "Colorado",
+    CT: "Connecticut",
+    DE: "Delaware",
+    FL: "Florida",
+    GA: "Georgia",
+    HI: "Hawaii",
+    ID: "Idaho",
+    IL: "Illinois",
+    IN: "Indiana",
+    IA: "Iowa",
+    KS: "Kansas",
+    KY: "Kentucky",
+    LA: "Louisiana",
+    ME: "Maine",
+    MD: "Maryland",
+    MA: "Massachusetts",
+    MI: "Michigan",
+    MN: "Minnesota",
+    MS: "Mississippi",
+    MO: "Missouri",
+    MT: "Montana",
+    NE: "Nebraska",
+    NV: "Nevada",
+    NH: "New Hampshire",
+    NJ: "New Jersey",
+    NM: "New Mexico",
+    NY: "New York",
+    NC: "North Carolina",
+    ND: "North Dakota",
+    OH: "Ohio",
+    OK: "Oklahoma",
+    OR: "Oregon",
+    PA: "Pennsylvania",
+    RI: "Rhode Island",
+    SC: "South Carolina",
+    SD: "South Dakota",
+    TN: "Tennessee",
+    TX: "Texas",
+    UT: "Utah",
+    VT: "Vermont",
+    VA: "Virginia",
+    WA: "Washington",
+    WV: "West Virginia",
+    WI: "Wisconsin",
+    WY: "Wyoming",
+    DC: "District of Columbia"
+  };
+  function expandStateValue(category, value) {
+    if (category === "state") {
+      return US_STATES[value.toUpperCase()] ?? value;
+    }
+    return value;
+  }
   async function fillAriaListbox(el, value) {
     el.click();
     await new Promise((r) => setTimeout(r, 350));
@@ -238,7 +297,7 @@
     if (!value) return false;
     const el = field.element;
     if (el instanceof HTMLButtonElement && el.getAttribute("aria-haspopup") === "listbox") {
-      const ok = await fillAriaListbox(el, value);
+      const ok = await fillAriaListbox(el, expandStateValue(field.category, value));
       if (ok) {
         el.style.outline = "2px solid #f5a623";
         el.style.outlineOffset = "2px";

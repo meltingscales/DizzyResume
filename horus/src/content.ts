@@ -187,6 +187,28 @@ function nativeInputSetter(el: HTMLInputElement | HTMLTextAreaElement, value: st
   el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
 }
 
+// US state abbreviation → full name (used when ATS dropdowns show full names)
+const US_STATES: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina',
+  ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania',
+  RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee',
+  TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington',
+  WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming', DC: 'District of Columbia',
+};
+
+function expandStateValue(category: FieldCategory, value: string): string {
+  if (category === 'state') {
+    return US_STATES[value.toUpperCase()] ?? value;
+  }
+  return value;
+}
+
 /** Click open an ARIA listbox button and pick the matching option. */
 async function fillAriaListbox(el: HTMLElement, value: string): Promise<boolean> {
   el.click();
@@ -212,7 +234,7 @@ async function fillField(field: DetectedField, value: string): Promise<boolean> 
   const el = field.element;
 
   if (el instanceof HTMLButtonElement && el.getAttribute('aria-haspopup') === 'listbox') {
-    const ok = await fillAriaListbox(el, value);
+    const ok = await fillAriaListbox(el, expandStateValue(field.category, value));
     if (ok) {
       el.style.outline = '2px solid #f5a623';
       el.style.outlineOffset = '2px';
