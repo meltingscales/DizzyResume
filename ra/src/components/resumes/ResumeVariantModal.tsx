@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileUp } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { api } from '../../lib/api';
-import type { ResumeVariant, CreateResumeVariantInput, UpdateResumeVariantInput } from '../../types';
+import type { CreateResumeVariantInput, UpdateResumeVariantInput } from '../../types';
+import type { ResumeVariant } from '../../types';
 
 interface ResumeVariantModalProps {
   profileId: string;
@@ -21,7 +22,23 @@ export function ResumeVariantModal({
   const [description, setDescription] = useState(variant?.description ?? '');
   const [content, setContent] = useState(variant?.content ?? '');
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleImportPdf = async () => {
+    setImporting(true);
+    setError(null);
+    try {
+      const text = await api.pdf.import();
+      if (text === null) return; // user cancelled
+      if (content.trim() && !confirm('Replace existing content with the imported PDF text?')) return;
+      setContent(text);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,9 +100,22 @@ export function ResumeVariantModal({
         </div>
 
         <div>
-          <label className={labelClass}>Content</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={labelClass}>Content</label>
+            <button
+              type="button"
+              onClick={handleImportPdf}
+              disabled={importing}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors disabled:opacity-50"
+            >
+              {importing
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <FileUp className="w-3 h-3" />}
+              {importing ? 'Importing…' : 'Import from PDF'}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground mb-1">
-            Paste the full text of your resume. This is stored locally and sent to Horus for autofill.
+            Paste the full text of your resume, or import from a PDF. Stored locally and sent to Horus for autofill.
           </p>
           <textarea
             className={`${inputClass} resize-none font-mono text-xs leading-relaxed`}

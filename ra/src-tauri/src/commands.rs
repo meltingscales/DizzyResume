@@ -2,6 +2,14 @@ use chrono::Utc;
 use tauri::State;
 use uuid::Uuid;
 
+// ── PDF import ────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn extract_pdf_text(path: String) -> Result<String, AppError> {
+    pdf_extract::extract_text(&path)
+        .map_err(|e| AppError::InvalidInput(format!("Could not read PDF: {e}")))
+}
+
 use crate::db::Database;
 use crate::error::AppError;
 use crate::models::*;

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import type {
   Profile,
   ProfileStats,
@@ -61,6 +62,18 @@ export const api = {
       invoke<Snippet>('update_snippet', { id, input }),
     recordUse: (id: string) => invoke<void>('record_snippet_use', { id }),
     delete: (id: string) => invoke<void>('delete_snippet', { id }),
+  },
+
+  pdf: {
+    /** Opens a native file picker then returns the extracted plain text, or null if cancelled. */
+    import: async (): Promise<string | null> => {
+      const path = await openFileDialog({
+        multiple: false,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (!path) return null;
+      return invoke<string>('extract_pdf_text', { path });
+    },
   },
 
   applications: {
