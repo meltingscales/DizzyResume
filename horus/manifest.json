@@ -28,7 +28,6 @@
 
   "content_scripts": [
     {
-      "type": "module",
       "matches": [
         "*://*.myworkdayjobs.com/*",
         "*://*.greenhouse.io/*",

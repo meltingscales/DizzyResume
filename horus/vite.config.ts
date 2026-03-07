@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, existsSync } from 'fs';
 
-/// Copy static extension files (manifest, popup HTML, icons) into dist after build.
+/// Copy static extension files (manifest, popup HTML) into dist after build.
 function copyExtensionFiles(): Plugin {
   return {
     name: 'copy-extension-files',
@@ -13,15 +13,14 @@ function copyExtensionFiles(): Plugin {
         mkdirSync('dist', { recursive: true });
         copyFileSync(file, dest);
       }
-      // Copy icons if they exist
       if (existsSync('icons')) {
         mkdirSync('dist/icons', { recursive: true });
-        // Icons are copied by the build; for now just note their location
       }
     },
   };
 }
 
+// Build 1: background service worker + popup as ES modules (support ES imports natively)
 export default defineConfig({
   plugins: [copyExtensionFiles()],
   build: {
@@ -30,7 +29,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         background: resolve(__dirname, 'src/background.ts'),
-        content: resolve(__dirname, 'src/content.ts'),
         popup: resolve(__dirname, 'src/popup/popup.ts'),
       },
       output: {
