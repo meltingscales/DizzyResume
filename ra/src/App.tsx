@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { ProfilesView } from './components/profiles/ProfilesView';
+import { ResumesView } from './components/resumes/ResumesView';
 import { TrackerView } from './components/tracker/TrackerView';
 import { TemplatesView } from './components/templates/TemplatesView';
+import { SnippetsView } from './components/snippets/SnippetsView';
+import { DiscoveryView } from './components/discovery/DiscoveryView';
 import { SettingsView } from './components/layout/SettingsView';
 import type { ViewId } from './types';
 import './App.css';
@@ -15,18 +18,18 @@ function App() {
     switch (currentView) {
       case 'profiles':
         return <ProfilesView />;
+      case 'resumes':
+        return <ResumesView />;
       case 'tracker':
         return <TrackerView />;
       case 'templates':
         return <TemplatesView />;
+      case 'snippets':
+        return <SnippetsView />;
+      case 'discovery':
+        return <DiscoveryView />;
       case 'settings':
         return <SettingsView />;
-      default:
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">Coming soon...</p>
-          </div>
-        );
     }
   };
 

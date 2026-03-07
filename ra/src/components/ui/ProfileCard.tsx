@@ -1,25 +1,30 @@
 import { Edit, Download } from 'lucide-react';
-import type { UserProfile } from '../../types';
+import type { Profile } from '../../types';
 
 interface ProfileCardProps {
-  profile: UserProfile;
+  profile: Profile;
 }
 
 export function ProfileCard({ profile }: ProfileCardProps) {
-  const timeAgo = (date: Date) => {
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const timeAgo = (isoString: string) => {
+    const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
     if (seconds < 60) return 'Just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
+  const initials = profile.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('');
+
   return (
     <div className="p-5 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sun-gold to-sun-gold-dark flex items-center justify-center text-white font-semibold text-lg">
-            {profile.name.split(' ').map((n) => n[0]).join('')}
+            {initials}
           </div>
           <div>
             <h3 className="font-semibold text-lg">{profile.name}</h3>
@@ -37,15 +42,16 @@ export function ProfileCard({ profile }: ProfileCardProps) {
       </div>
 
       <div className="flex gap-4 text-sm text-muted-foreground mb-3">
-        <span className="flex items-center gap-1">
-          <span>📄</span> {profile.resumeVariants} variants
+        <span>
+          {profile.city}, {profile.state}
         </span>
-        <span className="flex items-center gap-1">
-          <span>📊</span> {profile.applications} applications
-        </span>
-        <span className="flex items-center gap-1">
-          <span>⏰</span> {profile.lastActive && timeAgo(profile.lastActive)}
-        </span>
+        {profile.linkedin_url && (
+          <span className="truncate">{profile.linkedin_url}</span>
+        )}
+      </div>
+
+      <div className="text-xs text-muted-foreground mb-3">
+        Updated {timeAgo(profile.updated_at)}
       </div>
 
       <div className="flex gap-2">

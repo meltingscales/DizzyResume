@@ -1,71 +1,57 @@
-import { Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Download, Loader2 } from 'lucide-react';
 import { KanbanColumn } from '../ui/KanbanColumn';
-import type { Application } from '../../types';
+import { api } from '../../lib/api';
+import type { Application, ApplicationStatus } from '../../types';
 
-// Mock data - will be replaced with Seshat database calls
-const mockApplications: Application[] = [
-  {
-    id: '1',
-    company: 'Cloudflare',
-    title: 'Staff Engineer',
-    location: 'Austin, TX / Remote',
-    status: 'bookmarked',
-    salaryMin: 180000,
-    salaryMax: 220000,
-    atsPlatform: 'Greenhouse',
-    appliedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    age: 'fresh',
-  },
-  {
-    id: '2',
-    company: 'Vercel',
-    title: 'Senior Frontend Engineer',
-    location: 'Remote',
-    status: 'applied',
-    salaryMin: 160000,
-    salaryMax: 200000,
-    atsPlatform: 'Lever',
-    appliedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    age: 'warning',
-  },
-  {
-    id: '3',
-    company: 'Anthropic',
-    title: 'ML Engineer',
-    location: 'San Francisco, CA',
-    status: 'bookmarked',
-    salaryMin: 250000,
-    salaryMax: 300000,
-    atsPlatform: 'Workday',
-    appliedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    age: 'fresh',
-  },
-  {
-    id: '4',
-    company: 'Stripe',
-    title: 'Full Stack Engineer',
-    location: 'Remote',
-    status: 'applied',
-    salaryMin: 200000,
-    salaryMax: 250000,
-    atsPlatform: 'Greenhouse',
-    appliedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    age: 'stale',
-  },
+const columns: { id: ApplicationStatus; label: string; color: string }[] = [
+  { id: 'bookmarked', label: '📌 Bookmarked', color: 'border-l-4 border-l-yellow-500' },
+  { id: 'applied', label: '📝 Applied', color: 'border-l-4 border-l-blue-500' },
+  { id: 'phone-screen', label: '📞 Screen', color: 'border-l-4 border-l-purple-500' },
+  { id: 'interview', label: '💬 Interview', color: 'border-l-4 border-l-orange-500' },
+  { id: 'offer', label: '✅ Offer', color: 'border-l-4 border-l-green-500' },
 ];
 
-const columns = [
-  { id: 'bookmarked' as const, label: '📌 Bookmarked', color: 'border-l-4 border-l-yellow-500' },
-  { id: 'applied' as const, label: '📝 Applied', color: 'border-l-4 border-l-blue-500' },
-  { id: 'phone-screen' as const, label: '📞 Screen', color: 'border-l-4 border-l-purple-500' },
-  { id: 'interview' as const, label: '💬 Interview', color: 'border-l-4 border-l-orange-500' },
-  { id: 'offer' as const, label: '✅ Offer', color: 'border-l-4 border-l-green-500' },
-];
+const ageColors = {
+  fresh: 'bg-green-500/10 border-green-500/30',
+  warning: 'bg-yellow-500/10 border-yellow-500/30',
+  stale: 'bg-red-500/10 border-red-500/30',
+};
 
 export function TrackerView() {
-  const getApplicationsByStatus = (status: Application['status']) => {
-    return mockApplications.filter((app) => app.status === status);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.profiles
+      .list()
+      .then((profiles) => {
+        if (profiles.length === 0) return [];
+        return api.applications.list(profiles[0].id);
+      })
+      .then(setApplications)
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleStatusChange = async (app: Application, newStatus: ApplicationStatus) => {
+    try {
+      const updated = await api.applications.updateStatus(app.id, newStatus);
+      setApplications((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (e) {
+      setError(String(e));
+    }
   };
+
+  const byStatus = (status: ApplicationStatus) =>
+    applications.filter((a) => a.status === status);
+
+  const applied = applications.filter((a) => a.status !== 'bookmarked');
+  const thisWeek = applied.filter((a) => {
+    const days = (Date.now() - new Date(a.created_at).getTime()) / 86400000;
+    return days < 7;
+  });
 
   return (
     <div className="h-full flex flex-col">
@@ -84,67 +70,109 @@ export function TrackerView() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="flex gap-6 mt-4 text-sm">
-          <span>📈 <strong>This Week:</strong> 5 apps</span>
-          <span>🔥 <strong>Streak:</strong> 3 days</span>
-          <span>📊 <strong>Response Rate:</strong> 13%</span>
+          <span>
+            📈 <strong>This Week:</strong> {thisWeek.length} apps
+          </span>
+          <span>
+            📊 <strong>Total Applied:</strong> {applied.length}
+          </span>
         </div>
       </div>
 
+      {error && (
+        <div className="mx-4 mt-4 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/30 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto p-4">
-        <div className="flex gap-4 h-full min-w-max">
-          {columns.map((column) => {
-            const apps = getApplicationsByStatus(column.id);
-            return (
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          Loading applications...
+        </div>
+      ) : (
+        <div className="flex-1 overflow-x-auto p-4">
+          <div className="flex gap-4 h-full min-w-max">
+            {columns.map((col) => (
               <KanbanColumn
-                key={column.id}
-                title={column.label}
-                count={apps.length}
-                className={column.color}
+                key={col.id}
+                title={col.label}
+                count={byStatus(col.id).length}
+                className={col.color}
               >
-                {apps.map((app) => (
-                  <ApplicationCard key={app.id} application={app} />
+                {byStatus(col.id).map((app) => (
+                  <ApplicationCard
+                    key={app.id}
+                    application={app}
+                    onStatusChange={handleStatusChange}
+                  />
                 ))}
               </KanbanColumn>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function ApplicationCard({ application }: { application: Application }) {
-  const ageColors = {
-    fresh: 'bg-green-500/10 border-green-500/30',
-    warning: 'bg-yellow-500/10 border-yellow-500/30',
-    stale: 'bg-red-500/10 border-red-500/30',
+function ApplicationCard({
+  application,
+  onStatusChange,
+}: {
+  application: Application;
+  onStatusChange: (app: Application, status: ApplicationStatus) => void;
+}) {
+  const formatSalary = (min?: number | null, max?: number | null) => {
+    if (!min && !max) return null;
+    const fmt = (n: number) => `$${(n / 1000).toFixed(0)}k`;
+    if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+    return min ? fmt(min) : max ? fmt(max) : null;
   };
 
-  const formatSalary = (min?: number, max?: number) => {
-    if (!min && !max) return null;
-    const format = (n: number) => `$${(n / 1000).toFixed(0)}k`;
-    if (min && max) return `${format(min)} - ${format(max)}`;
-    return min || max ? format(min || max!) : null;
-  };
+  const salary = formatSalary(application.salary_min, application.salary_max);
+
+  const nextStatuses: ApplicationStatus[] = [
+    'bookmarked',
+    'applied',
+    'phone-screen',
+    'interview',
+    'offer',
+    'rejected',
+    'withdrawn',
+  ].filter((s) => s !== application.status) as ApplicationStatus[];
 
   return (
-    <div className={`p-3 bg-card rounded-lg border border-border mb-2 hover:border-primary/50 transition-colors ${ageColors[application.age]}`}>
+    <div
+      className={`p-3 bg-card rounded-lg border border-border mb-2 hover:border-primary/50 transition-colors ${ageColors[application.age]}`}
+    >
       <h4 className="font-medium text-sm mb-1">{application.title}</h4>
       <p className="text-sm text-muted-foreground mb-2">{application.company}</p>
 
-      {formatSalary(application.salaryMin, application.salaryMax) && (
+      {salary && (
         <div className="inline-block px-2 py-1 text-xs bg-secondary rounded mb-2">
-          {formatSalary(application.salaryMin, application.salaryMax)}
+          {salary}
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{application.atsPlatform}</span>
-        <span>{application.appliedAt.toLocaleDateString()}</span>
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+        <span>{application.ats_platform || '—'}</span>
+        <span>{new Date(application.created_at).toLocaleDateString()}</span>
       </div>
+
+      <select
+        value={application.status}
+        onChange={(e) => onStatusChange(application, e.target.value as ApplicationStatus)}
+        className="w-full px-2 py-1 text-xs bg-secondary border border-border rounded"
+      >
+        {nextStatuses.map((s) => (
+          <option key={s} value={s}>
+            Move → {s}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

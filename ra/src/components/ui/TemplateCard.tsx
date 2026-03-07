@@ -1,22 +1,16 @@
-import { LucideIcon, Edit, Play } from 'lucide-react';
+import { LucideIcon, Edit, Play, Trash2 } from 'lucide-react';
+import type { Template } from '../../types';
 
 interface TemplateCardProps {
-  template: {
-    id: string;
-    type: string;
-    title: string;
-    description: string;
-    variables: string[];
-    lastUsed?: Date;
-    useCount: number;
-  };
+  template: Template;
   Icon: LucideIcon;
+  onDelete?: () => void;
 }
 
-export function TemplateCard({ template, Icon }: TemplateCardProps) {
-  const timeAgo = (date?: Date) => {
-    if (!date) return 'Never';
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+export function TemplateCard({ template, Icon, onDelete }: TemplateCardProps) {
+  const timeAgo = (isoString?: string | null) => {
+    if (!isoString) return 'Never';
+    const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     return `${Math.floor(seconds / 86400)}d ago`;
@@ -41,22 +35,30 @@ export function TemplateCard({ template, Icon }: TemplateCardProps) {
           <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Use">
             <Play className="w-4 h-4" />
           </button>
+          {onDelete && (
+            <button
+              className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors"
+              title="Delete"
+              onClick={onDelete}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
-        <span>Last used: {timeAgo(template.lastUsed)}</span>
+        <span>Last used: {timeAgo(template.last_used_at)}</span>
         <span>•</span>
-        <span>Used {template.useCount} times</span>
+        <span>Used {template.use_count} times</span>
       </div>
 
       {template.variables.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {template.variables.map((v) => (
-            <span
-              key={v}
-              className="px-2 py-0.5 text-xs bg-secondary rounded"
-            >{`{${v}}`}</span>
+            <span key={v} className="px-2 py-0.5 text-xs bg-secondary rounded">
+              {`{${v}}`}
+            </span>
           ))}
         </div>
       )}

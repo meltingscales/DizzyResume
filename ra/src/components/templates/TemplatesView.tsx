@@ -1,53 +1,48 @@
-import { Plus, FileEdit, Users, MessageSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, FileEdit, Users, MessageSquare, Loader2, type LucideIcon } from 'lucide-react';
 import { TemplateCard } from '../ui/TemplateCard';
+import { api } from '../../lib/api';
+import type { Template } from '../../types';
 
-// Mock data - will be replaced with Thoth database calls
-const mockTemplates = [
-  {
-    id: '1',
-    type: 'cover-letter' as const,
-    title: 'Cover Letter - General',
-    description: 'General purpose cover letter template',
-    variables: ['company', 'role', 'specific_skill'],
-    lastUsed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    useCount: 8,
-  },
-  {
-    id: '2',
-    type: 'cover-letter' as const,
-    title: 'Cover Letter - Startup',
-    description: 'Startup-focused cover letter with enthusiasm',
-    variables: ['company', 'role', 'founder_name'],
-    lastUsed: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    useCount: 3,
-  },
-  {
-    id: '3',
-    type: 'references' as const,
-    title: 'Reference Sheet - Technical',
-    description: '3 references: Manager, Peer, Senior',
-    variables: [],
-    lastUsed: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    useCount: 5,
-  },
-  {
-    id: '4',
-    type: 'qa' as const,
-    title: 'Q&A - Leadership Questions',
-    description: '4 variations of "tell me about a time you led..."',
-    variables: [],
-    lastUsed: undefined,
-    useCount: 2,
-  },
-];
-
-const typeIcons = {
+const typeIcons: Record<string, LucideIcon> = {
   'cover-letter': FileEdit,
   references: Users,
   qa: MessageSquare,
 };
 
 export function TemplatesView() {
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState('all');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    api.templates
+      .list()
+      .then(setTemplates)
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.templates.delete(id);
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const filtered = templates.filter((t) => {
+    const matchesType = filterType === 'all' || t.type === filterType;
+    const matchesSearch =
+      !search ||
+      t.title.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase());
+    return matchesType && matchesSearch;
+  });
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -66,32 +61,54 @@ export function TemplatesView() {
 
       {/* Filter Bar */}
       <div className="flex gap-3 mb-6">
-        <select className="px-3 py-2 bg-card border border-border rounded-md text-sm">
-          <option>All Types</option>
-          <option>Cover Letters</option>
-          <option>References</option>
-          <option>Q&A</option>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="px-3 py-2 bg-card border border-border rounded-md text-sm"
+        >
+          <option value="all">All Types</option>
+          <option value="cover-letter">Cover Letters</option>
+          <option value="references">References</option>
+          <option value="qa">Q&A</option>
         </select>
         <input
           type="text"
           placeholder="Search templates..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           className="flex-1 px-3 py-2 bg-card border border-border rounded-md text-sm"
         />
       </div>
 
-      {/* Template Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {mockTemplates.map((template) => (
-          <TemplateCard key={template.id} template={template} Icon={typeIcons[template.type]} />
-        ))}
-
-        {/* Add New Card */}
-        <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer">
-          <Plus className="w-12 h-12 mb-2" />
-          <p className="font-medium">Create from Scratch</p>
-          <p className="text-sm">Or import from library</p>
+      {error && (
+        <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/30 text-sm">
+          {error}
         </div>
-      </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          Loading templates...
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {filtered.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              Icon={typeIcons[template.type] ?? FileEdit}
+              onDelete={() => handleDelete(template.id)}
+            />
+          ))}
+
+          <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer">
+            <Plus className="w-12 h-12 mb-2" />
+            <p className="font-medium">Create from Scratch</p>
+            <p className="text-sm">Or import from library</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
