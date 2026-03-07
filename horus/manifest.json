@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "Horus — DizzyResume",
+  "version": "0.1.0",
+  "description": "Autofill job applications using your Ra profile data.",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "clipboardWrite"
+  ],
+
+  "host_permissions": [
+    "http://127.0.0.1:9741/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "content_scripts": [
+    {
+      "type": "module",
+      "matches": [
+        "*://*.myworkdayjobs.com/*",
+        "*://*.greenhouse.io/*",
+        "*://*.lever.co/*",
+        "*://*.icims.com/*",
+        "*://*.taleo.net/*",
+        "*://*.workforcenow.adp.com/*",
+        "*://*.bamboohr.com/*",
+        "*://*.ashbyhq.com/*",
+        "*://*.smartrecruiters.com/*",
+        "*://*.jobvite.com/*",
+        "*://*.applytojob.com/*",
+        "*://*.recruiting.paylocity.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Horus — DizzyResume",
+    "default_icon": {
+      "16": "icons/horus-16.png",
+      "48": "icons/horus-48.png",
+      "128": "icons/horus-128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/horus-16.png",
+    "48": "icons/horus-48.png",
+    "128": "icons/horus-128.png"
+  }
+}

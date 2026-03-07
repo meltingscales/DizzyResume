@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Horus</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        width: 300px;
+        min-height: 200px;
+        background: #0f0f1a;
+        color: #e8e8f0;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px;
+        border-bottom: 1px solid #2a2a3e;
+      }
+      .header-title { font-weight: 700; font-size: 15px; color: #f5a623; }
+      .header-sub { font-size: 11px; color: #666; margin-left: auto; }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: #13131f;
+        font-size: 11px;
+        color: #888;
+        border-bottom: 1px solid #2a2a3e;
+      }
+      .dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .dot-green { background: #22c55e; }
+      .dot-red   { background: #ef4444; }
+      .dot-yellow { background: #eab308; animation: pulse 1.2s infinite; }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+      .section { padding: 12px 14px; border-bottom: 1px solid #2a2a3e; }
+      .section-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+
+      select, button {
+        font-family: inherit;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid #2a2a3e;
+        outline: none;
+      }
+      select {
+        width: 100%;
+        padding: 7px 10px;
+        background: #1a1a2e;
+        color: #e8e8f0;
+        cursor: pointer;
+        margin-bottom: 4px;
+      }
+      select:focus { border-color: #f5a623; }
+
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 9px;
+        background: #f5a623;
+        color: #000;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: opacity .15s;
+        margin-top: 6px;
+      }
+      .btn:disabled { opacity: .4; cursor: not-allowed; }
+      .btn:not(:disabled):hover { opacity: .9; }
+      .btn-secondary {
+        background: transparent;
+        color: #888;
+        border-color: #2a2a3e;
+        margin-top: 4px;
+      }
+      .btn-secondary:hover { color: #e8e8f0; border-color: #555; }
+
+      .ats-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: #22c55e22;
+        color: #22c55e;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .no-ats { color: #555; font-style: italic; }
+
+      #fill-result {
+        font-size: 11px;
+        color: #22c55e;
+        text-align: center;
+        padding: 6px 0 0;
+        min-height: 20px;
+      }
+
+      .footer {
+        padding: 8px 14px;
+        font-size: 11px;
+        color: #444;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <span style="font-size:18px;">☀️</span>
+      <span class="header-title">Horus</span>
+      <span class="header-sub">DizzyResume</span>
+    </div>
+
+    <!-- Ra status -->
+    <div class="status-bar">
+      <span class="dot dot-yellow" id="ra-dot"></span>
+      <span id="ra-status">Connecting to Ra…</span>
+    </div>
+
+    <!-- ATS detection -->
+    <div class="section">
+      <div class="section-label">Current Page</div>
+      <div id="ats-info" class="no-ats">Not an ATS page</div>
+    </div>
+
+    <!-- Profile & variant selection -->
+    <div class="section" id="profile-section">
+      <div class="section-label">Profile</div>
+      <select id="profile-select" disabled>
+        <option value="">— select profile —</option>
+      </select>
+      <div class="section-label" style="margin-top:8px;">Resume Variant</div>
+      <select id="variant-select" disabled>
+        <option value="">— select variant —</option>
+      </select>
+    </div>
+
+    <!-- Fill actions -->
+    <div class="section">
+      <button class="btn" id="fill-btn" disabled>Fill All Fields</button>
+      <button class="btn btn-secondary" id="undo-btn" disabled>Undo Fill</button>
+      <div id="fill-result"></div>
+    </div>
+
+    <div class="footer">Ra must be running for autofill to work.</div>
+
+    <script src="../popup.js" type="module"></script>
+  </body>
+</html>

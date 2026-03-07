@@ -38,6 +38,14 @@ dev:
 dev-web:
     pnpm --filter @dizzy-resume/ra dev
 
+# Build the Horus extension and watch for changes
+dev-horus:
+    pnpm --filter @dizzy-resume/horus dev
+
+# Build the Horus extension for loading into Chrome
+build-horus:
+    pnpm --filter @dizzy-resume/horus build
+
 # Preview the production Vite build
 preview:
     pnpm --filter @dizzy-resume/ra preview
