@@ -5,6 +5,8 @@ export interface Profile {
   name: string;
   email: string;
   phone: string;
+  address_line1: string;
+  address_line2: string;
   city: string;
   state: string;
   zip_code: string;
@@ -104,6 +106,8 @@ export type FieldCategory =
   | 'full_name'
   | 'email'
   | 'phone'
+  | 'address_line1'
+  | 'address_line2'
   | 'city'
   | 'state'
   | 'zip'

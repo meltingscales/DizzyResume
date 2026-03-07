@@ -14,6 +14,8 @@ const empty: CreateProfileInput = {
   name: '',
   email: '',
   phone: '',
+  address_line1: '',
+  address_line2: '',
   city: '',
   state: '',
   zip_code: '',
@@ -27,6 +29,8 @@ function fromProfile(p: Profile): CreateProfileInput {
     name: p.name,
     email: p.email,
     phone: p.phone,
+    address_line1: p.address_line1,
+    address_line2: p.address_line2,
     city: p.city,
     state: p.state,
     zip_code: p.zip_code,
@@ -109,6 +113,26 @@ export function ProfileModal({ profile, onClose, onSave }: ProfileModalProps) {
             value={form.phone}
             onChange={(e) => set('phone', e.target.value)}
             placeholder="555-0123"
+          />
+        </div>
+
+        {/* Address */}
+        <div>
+          <label className={labelClass}>Street Address</label>
+          <input
+            className={inputClass}
+            value={form.address_line1}
+            onChange={(e) => set('address_line1', e.target.value)}
+            placeholder="123 Main St"
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Address Line 2</label>
+          <input
+            className={inputClass}
+            value={form.address_line2}
+            onChange={(e) => set('address_line2', e.target.value)}
+            placeholder="Apt 4B"
           />
         </div>
 

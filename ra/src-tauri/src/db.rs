@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     name        TEXT NOT NULL,
     email       TEXT NOT NULL,
     phone       TEXT NOT NULL,
+    address_line1 TEXT NOT NULL DEFAULT '',
+    address_line2 TEXT NOT NULL DEFAULT '',
     city        TEXT NOT NULL DEFAULT '',
     state       TEXT NOT NULL DEFAULT '',
     zip_code    TEXT NOT NULL DEFAULT '',
@@ -82,5 +84,8 @@ CREATE TABLE IF NOT EXISTS applications (
 pub fn init(path: impl AsRef<std::path::Path>) -> Result<Database> {
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
+    // Migrations: ALTER TABLE is idempotent via .ok() — silently ignored if column exists.
+    conn.execute("ALTER TABLE profiles ADD COLUMN address_line1 TEXT NOT NULL DEFAULT ''", []).ok();
+    conn.execute("ALTER TABLE profiles ADD COLUMN address_line2 TEXT NOT NULL DEFAULT ''", []).ok();
     Ok(Database(Arc::new(Mutex::new(conn))))
 }

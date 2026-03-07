@@ -1,5 +1,4 @@
-import { r as raApi } from "./assets/api-DnzFSuXz.js";
-import { S as SUPPORTED_PLATFORMS, d as detectAts } from "./assets/detect-C29rGrdD.js";
+import { S as SUPPORTED_PLATFORMS, r as raApi, d as detectAts } from "./assets/api-CG9irCF4.js";
 const raDot = document.getElementById("ra-dot");
 const raStatus = document.getElementById("ra-status");
 const atsInfo = document.getElementById("ats-info");

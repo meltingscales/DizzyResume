@@ -73,7 +73,8 @@ async fn list_profiles(State(db): State<Database>) -> ApiResult<Vec<Profile>> {
     let conn = db.0.lock().unwrap();
     let mut stmt = conn
         .prepare(
-            "SELECT id, name, email, phone, city, state, zip_code, country,
+            "SELECT id, name, email, phone, address_line1, address_line2,
+                    city, state, zip_code, country,
                     linkedin_url, website, created_at, updated_at
              FROM profiles ORDER BY name ASC",
         )
@@ -85,6 +86,8 @@ async fn list_profiles(State(db): State<Database>) -> ApiResult<Vec<Profile>> {
                 name: row.get("name")?,
                 email: row.get("email")?,
                 phone: row.get("phone")?,
+                address_line1: row.get("address_line1")?,
+                address_line2: row.get("address_line2")?,
                 city: row.get("city")?,
                 state: row.get("state")?,
                 zip_code: row.get("zip_code")?,
@@ -108,7 +111,8 @@ async fn get_profile(
 ) -> ApiResult<Profile> {
     let conn = db.0.lock().unwrap();
     conn.query_row(
-        "SELECT id, name, email, phone, city, state, zip_code, country,
+        "SELECT id, name, email, phone, address_line1, address_line2,
+                city, state, zip_code, country,
                 linkedin_url, website, created_at, updated_at
          FROM profiles WHERE id=?1",
         [&id],
@@ -118,6 +122,8 @@ async fn get_profile(
                 name: row.get("name")?,
                 email: row.get("email")?,
                 phone: row.get("phone")?,
+                address_line1: row.get("address_line1")?,
+                address_line2: row.get("address_line2")?,
                 city: row.get("city")?,
                 state: row.get("state")?,
                 zip_code: row.get("zip_code")?,

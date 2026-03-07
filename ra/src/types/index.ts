@@ -15,6 +15,8 @@ export interface Profile {
   name: string;
   email: string;
   phone: string;
+  address_line1: string;
+  address_line2: string;
   city: string;
   state: string;
   zip_code: string;
@@ -29,6 +31,8 @@ export interface CreateProfileInput {
   name: string;
   email: string;
   phone: string;
+  address_line1: string;
+  address_line2: string;
   city: string;
   state: string;
   zip_code: string;

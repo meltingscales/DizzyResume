@@ -41,7 +41,8 @@ fn compute_age(applied_at: &Option<String>, created_at: &str) -> String {
 
 fn fetch_profile(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<Profile> {
     conn.query_row(
-        "SELECT id, name, email, phone, city, state, zip_code, country,
+        "SELECT id, name, email, phone, address_line1, address_line2,
+                city, state, zip_code, country,
                 linkedin_url, website, created_at, updated_at
          FROM profiles WHERE id=?1",
         [id],
@@ -51,6 +52,8 @@ fn fetch_profile(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<Prof
                 name: row.get("name")?,
                 email: row.get("email")?,
                 phone: row.get("phone")?,
+                address_line1: row.get("address_line1")?,
+                address_line2: row.get("address_line2")?,
                 city: row.get("city")?,
                 state: row.get("state")?,
                 zip_code: row.get("zip_code")?,
@@ -74,7 +77,8 @@ pub fn get_profile(db: State<'_, Database>, id: String) -> Result<Profile, AppEr
 pub fn get_profiles(db: State<'_, Database>) -> Result<Vec<Profile>, AppError> {
     let conn = db.0.lock().unwrap();
     let mut stmt = conn.prepare(
-        "SELECT id, name, email, phone, city, state, zip_code, country,
+        "SELECT id, name, email, phone, address_line1, address_line2,
+                city, state, zip_code, country,
                 linkedin_url, website, created_at, updated_at
          FROM profiles ORDER BY name ASC",
     )?;
@@ -85,6 +89,8 @@ pub fn get_profiles(db: State<'_, Database>) -> Result<Vec<Profile>, AppError> {
                 name: row.get("name")?,
                 email: row.get("email")?,
                 phone: row.get("phone")?,
+                address_line1: row.get("address_line1")?,
+                address_line2: row.get("address_line2")?,
                 city: row.get("city")?,
                 state: row.get("state")?,
                 zip_code: row.get("zip_code")?,
@@ -109,11 +115,13 @@ pub fn create_profile(
     let now = now();
     conn.execute(
         "INSERT INTO profiles
-         (id, name, email, phone, city, state, zip_code, country,
+         (id, name, email, phone, address_line1, address_line2,
+          city, state, zip_code, country,
           linkedin_url, website, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)",
         rusqlite::params![
             id, input.name, input.email, input.phone,
+            input.address_line1, input.address_line2,
             input.city, input.state, input.zip_code, input.country,
             input.linkedin_url, input.website, now,
         ],
@@ -123,6 +131,8 @@ pub fn create_profile(
         name: input.name,
         email: input.email,
         phone: input.phone,
+        address_line1: input.address_line1,
+        address_line2: input.address_line2,
         city: input.city,
         state: input.state,
         zip_code: input.zip_code,
@@ -143,11 +153,14 @@ pub fn update_profile(
     let conn = db.0.lock().unwrap();
     let now = now();
     let rows = conn.execute(
-        "UPDATE profiles SET name=?1, email=?2, phone=?3, city=?4, state=?5,
-         zip_code=?6, country=?7, linkedin_url=?8, website=?9, updated_at=?10
-         WHERE id=?11",
+        "UPDATE profiles SET name=?1, email=?2, phone=?3,
+         address_line1=?4, address_line2=?5,
+         city=?6, state=?7, zip_code=?8, country=?9,
+         linkedin_url=?10, website=?11, updated_at=?12
+         WHERE id=?13",
         rusqlite::params![
             input.name, input.email, input.phone,
+            input.address_line1, input.address_line2,
             input.city, input.state, input.zip_code, input.country,
             input.linkedin_url, input.website, now, id,
         ],

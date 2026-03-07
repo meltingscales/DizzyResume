@@ -31,6 +31,14 @@ const FIELD_PATTERNS: Array<{ category: FieldCategory; patterns: RegExp[] }> = [
     patterns: [/phone|mobile|cell|tel/i],
   },
   {
+    category: 'address_line1',
+    patterns: [/address.?line.?1|address.?1|street.?address|^address$|^street$|addr1|addressline1/i],
+  },
+  {
+    category: 'address_line2',
+    patterns: [/address.?line.?2|address.?2|apt|suite|unit|floor|addr2|addressline2/i],
+  },
+  {
     category: 'city',
     patterns: [/^city$|city.?town/i],
   },
@@ -138,6 +146,8 @@ function profileValueFor(category: FieldCategory, profile: Profile, variant?: Re
     case 'full_name': return profile.name;
     case 'email': return profile.email;
     case 'phone': return profile.phone;
+    case 'address_line1': return profile.address_line1;
+    case 'address_line2': return profile.address_line2;
     case 'city': return profile.city;
     case 'state': return profile.state;
     case 'zip': return profile.zip_code;
