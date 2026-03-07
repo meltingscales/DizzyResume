@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, FileText, Star, Eye, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { ResumeVariantModal } from './ResumeVariantModal';
+import { ResumePreviewModal } from './ResumePreviewModal';
 import type { ResumeVariant } from '../../types';
 
 export function ResumesView() {
@@ -12,6 +13,7 @@ export function ResumesView() {
   const [modal, setModal] = useState<{ open: boolean; variant?: ResumeVariant }>({
     open: false,
   });
+  const [preview, setPreview] = useState<ResumeVariant | null>(null);
 
   useEffect(() => {
     api.profiles
@@ -125,6 +127,7 @@ export function ResumesView() {
                 <button
                   className="p-2 hover:bg-secondary rounded-md transition-colors"
                   title="Preview"
+                  onClick={() => setPreview(variant)}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
@@ -156,6 +159,10 @@ export function ResumesView() {
             <p className="text-sm">Duplicate an existing variant or start fresh</p>
           </button>
         </div>
+      )}
+
+      {preview && (
+        <ResumePreviewModal variant={preview} onClose={() => setPreview(null)} />
       )}
 
       {modal.open && profileId && (
