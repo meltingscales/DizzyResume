@@ -1,27 +1,25 @@
-import { useEffect, useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Download, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { KanbanColumn } from '../ui/KanbanColumn';
 import { api } from '../../lib/api';
 import type { Application, ApplicationStatus } from '../../types';
 
 const columns: { id: ApplicationStatus; label: string; color: string }[] = [
-  { id: 'bookmarked', label: '📌 Bookmarked', color: 'border-l-4 border-l-yellow-500' },
-  { id: 'applied', label: '📝 Applied', color: 'border-l-4 border-l-blue-500' },
-  { id: 'phone-screen', label: '📞 Screen', color: 'border-l-4 border-l-purple-500' },
-  { id: 'interview', label: '💬 Interview', color: 'border-l-4 border-l-orange-500' },
-  { id: 'offer', label: '✅ Offer', color: 'border-l-4 border-l-green-500' },
+  { id: 'bookmarked',   label: '📌 Bookmarked', color: 'border-l-4 border-l-yellow-500' },
+  { id: 'applied',      label: '📝 Applied',     color: 'border-l-4 border-l-blue-500' },
+  { id: 'phone-screen', label: '📞 Screen',      color: 'border-l-4 border-l-purple-500' },
+  { id: 'interview',    label: '💬 Interview',   color: 'border-l-4 border-l-orange-500' },
+  { id: 'offer',        label: '✅ Offer',        color: 'border-l-4 border-l-green-500' },
+  { id: 'rejected',     label: '❌ Rejected',     color: 'border-l-4 border-l-red-500' },
+  { id: 'withdrawn',    label: '🚪 Withdrawn',   color: 'border-l-4 border-l-gray-500' },
 ];
-
-const ageColors = {
-  fresh: 'bg-green-500/10 border-green-500/30',
-  warning: 'bg-yellow-500/10 border-yellow-500/30',
-  stale: 'bg-red-500/10 border-red-500/30',
-};
 
 export function TrackerView() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<ApplicationStatus | null>(null);
+  const draggingId = useRef<string | null>(null);
 
   useEffect(() => {
     api.profiles
@@ -42,6 +40,30 @@ export function TrackerView() {
     } catch (e) {
       setError(String(e));
     }
+  };
+
+  const handleDelete = async (app: Application) => {
+    try {
+      await api.applications.delete(app.id);
+      setApplications((prev) => prev.filter((a) => a.id !== app.id));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const handleDragStart = (id: string) => { draggingId.current = id; };
+  const handleDragOver = (e: React.DragEvent, status: ApplicationStatus) => {
+    e.preventDefault();
+    setDragOverCol(status);
+  };
+  const handleDrop = (e: React.DragEvent, status: ApplicationStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const id = draggingId.current;
+    draggingId.current = null;
+    if (!id) return;
+    const app = applications.find((a) => a.id === id);
+    if (app && app.status !== status) handleStatusChange(app, status);
   };
 
   const byStatus = (status: ApplicationStatus) =>
@@ -144,12 +166,17 @@ export function TrackerView() {
                 title={col.label}
                 count={byStatus(col.id).length}
                 className={col.color}
+                isDragOver={dragOverCol === col.id}
+                onDragOver={(e) => handleDragOver(e, col.id)}
+                onDrop={(e) => handleDrop(e, col.id)}
               >
                 {byStatus(col.id).map((app) => (
                   <ApplicationCard
                     key={app.id}
                     application={app}
                     onStatusChange={handleStatusChange}
+                    onDelete={handleDelete}
+                    onDragStart={handleDragStart}
                   />
                 ))}
               </KanbanColumn>
@@ -161,12 +188,22 @@ export function TrackerView() {
   );
 }
 
+const ageColors = {
+  fresh: 'border-l-green-500',
+  warning: 'border-l-yellow-500',
+  stale: 'border-l-red-500',
+};
+
 function ApplicationCard({
   application,
   onStatusChange,
+  onDelete,
+  onDragStart,
 }: {
   application: Application;
   onStatusChange: (app: Application, status: ApplicationStatus) => void;
+  onDelete: (app: Application) => void;
+  onDragStart: (id: string) => void;
 }) {
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
@@ -176,46 +213,65 @@ function ApplicationCard({
   };
 
   const salary = formatSalary(application.salary_min, application.salary_max);
+  const date = application.applied_at ?? application.created_at;
 
-  const nextStatuses: ApplicationStatus[] = [
-    'bookmarked',
-    'applied',
-    'phone-screen',
-    'interview',
-    'offer',
-    'rejected',
-    'withdrawn',
-  ].filter((s) => s !== application.status) as ApplicationStatus[];
+  const allStatuses: ApplicationStatus[] = [
+    'bookmarked', 'applied', 'phone-screen', 'interview', 'offer', 'rejected', 'withdrawn',
+  ];
 
   return (
     <div
-      className={`p-3 bg-card rounded-lg border border-border mb-2 hover:border-primary/50 transition-colors ${ageColors[application.age]}`}
+      draggable
+      onDragStart={() => onDragStart(application.id)}
+      className={`p-3 bg-card rounded-lg border-l-4 border border-border mb-2 hover:border-primary/50 transition-colors cursor-grab active:cursor-grabbing ${ageColors[application.age]}`}
     >
-      <h4 className="font-medium text-sm mb-1">{application.title}</h4>
-      <p className="text-sm text-muted-foreground mb-2">{application.company}</p>
-
-      {salary && (
-        <div className="inline-block px-2 py-1 text-xs bg-secondary rounded mb-2">
-          {salary}
+      <div className="flex items-start justify-between gap-1 mb-0.5">
+        <h4 className="font-medium text-sm leading-tight">{application.title}</h4>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {application.job_url && (
+            <a
+              href={application.job_url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors"
+              title="Open job posting"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+          <button
+            onClick={() => onDelete(application)}
+            className="p-1 hover:bg-destructive/20 rounded text-muted-foreground hover:text-destructive transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-        <span>{application.ats_platform || '—'}</span>
-        <span>{new Date(application.created_at).toLocaleDateString()}</span>
       </div>
 
-      <select
-        value={application.status}
-        onChange={(e) => onStatusChange(application, e.target.value as ApplicationStatus)}
-        className="w-full px-2 py-1 text-xs bg-secondary border border-border rounded"
-      >
-        {nextStatuses.map((s) => (
-          <option key={s} value={s}>
-            Move → {s}
-          </option>
-        ))}
-      </select>
+      <p className="text-xs text-muted-foreground mb-2">{application.company}</p>
+
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+        <span>{application.location || application.ats_platform || '—'}</span>
+        {salary && <span className="text-sun-gold">{salary}</span>}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {new Date(date).toLocaleDateString()}
+        </span>
+        <select
+          value={application.status}
+          onChange={(e) => onStatusChange(application, e.target.value as ApplicationStatus)}
+          onClick={(e) => e.stopPropagation()}
+          className="px-1.5 py-0.5 text-xs bg-secondary border border-border rounded max-w-28"
+        >
+          {allStatuses.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

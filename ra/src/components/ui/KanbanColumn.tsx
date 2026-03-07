@@ -5,11 +5,28 @@ interface KanbanColumnProps {
   count: number;
   className?: string;
   children: ReactNode;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  isDragOver: boolean;
 }
 
-export function KanbanColumn({ title, count, className, children }: KanbanColumnProps) {
+export function KanbanColumn({
+  title,
+  count,
+  className,
+  children,
+  onDragOver,
+  onDrop,
+  isDragOver,
+}: KanbanColumnProps) {
   return (
-    <div className="w-72 flex-shrink-0 flex flex-col bg-secondary/30 rounded-lg">
+    <div
+      className={`w-64 flex-shrink-0 flex flex-col rounded-lg transition-colors ${
+        isDragOver ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-secondary/30'
+      }`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       {/* Header */}
       <div className={`p-3 rounded-t-lg ${className}`}>
         <div className="flex items-center justify-between">
@@ -19,7 +36,7 @@ export function KanbanColumn({ title, count, className, children }: KanbanColumn
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin min-h-16">
         {children}
       </div>
     </div>
