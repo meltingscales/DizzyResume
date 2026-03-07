@@ -731,6 +731,9 @@ async function init(): Promise<void> {
           null;
 
         updateBesPanel(profile, variant);
+        if (profile) {
+          watchForSubmission(ats.name, profile.id, variant?.id ?? null);
+        }
       } catch {
         updateBesPanel(null, null);
       }

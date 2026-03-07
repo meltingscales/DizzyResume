@@ -516,6 +516,156 @@
       savedValues = [];
     });
   }
+  function extractJobInfo() {
+    const hostname = window.location.hostname;
+    const subdomains = hostname.split(".");
+    const company = subdomains[0].replace(/^wd\d+$/, "") || subdomains[1] || "";
+    const h1 = document.querySelector("h1")?.textContent?.trim() ?? "";
+    const h2 = document.querySelector("h2")?.textContent?.trim() ?? "";
+    const fromTitle = document.title.split(/[|\-–]/)[0].trim();
+    const title = h1 || h2 || fromTitle;
+    const locInput = document.querySelector(
+      'input[name*="location" i], input[name*="city" i], input[id*="location" i]'
+    );
+    const location = locInput?.value.trim() ?? "";
+    return { company, title, location };
+  }
+  function openLogModal(ats, profileId, variantId) {
+    if (document.getElementById("horus-log-modal")) return;
+    const { company, title, location } = extractJobInfo();
+    const overlay = document.createElement("div");
+    overlay.id = "horus-log-modal";
+    overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 2147483646;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
+    const inputStyle = `
+    width: 100%; box-sizing: border-box;
+    padding: 7px 10px; background: #0d0d1a; border: 1px solid #333;
+    border-radius: 6px; color: #fff; font-size: 12px; outline: none;
+    margin-top: 3px;
+  `;
+    const labelStyle = `display:block; font-size:11px; color:#888; margin-bottom:10px;`;
+    overlay.innerHTML = `
+    <div style="
+      background:#1a1a2e; border:1px solid #f5a623; border-radius:12px;
+      width:400px; box-shadow:0 16px 48px rgba(0,0,0,0.6); color:#fff;
+      font-family:system-ui,sans-serif;
+    ">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #333;">
+        <span style="font-weight:600;color:#f5a623;font-size:14px;">📜 Log Application</span>
+        <button id="horus-log-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:18px;line-height:1;padding:0;">×</button>
+      </div>
+      <div style="padding:16px;">
+        <p style="font-size:11px;color:#888;margin:0 0 12px;">Horus detected a submission. Review and confirm to save to Ra.</p>
+        <label style="${labelStyle}">
+          Company
+          <input id="horus-log-company" style="${inputStyle}" value="${company}" />
+        </label>
+        <label style="${labelStyle}">
+          Job Title
+          <input id="horus-log-title" style="${inputStyle}" value="${title}" />
+        </label>
+        <label style="${labelStyle}">
+          Location
+          <input id="horus-log-location" style="${inputStyle}" value="${location}" />
+        </label>
+        <label style="${labelStyle}">
+          Notes
+          <input id="horus-log-notes" style="${inputStyle}" placeholder="Optional notes…" />
+        </label>
+        <div id="horus-log-error" style="font-size:11px;color:#e57373;margin-bottom:8px;display:none;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="horus-log-skip" style="
+            padding:7px 14px;background:transparent;color:#888;border:1px solid #333;
+            border-radius:6px;cursor:pointer;font-size:12px;
+          ">Skip</button>
+          <button id="horus-log-confirm" style="
+            padding:7px 14px;background:#f5a623;color:#000;border:none;
+            border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;
+          ">Log It</button>
+        </div>
+      </div>
+    </div>
+  `;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.querySelector("#horus-log-close")?.addEventListener("click", close);
+    overlay.querySelector("#horus-log-skip")?.addEventListener("click", close);
+    overlay.querySelector("#horus-log-confirm")?.addEventListener("click", async () => {
+      const companyVal = overlay.querySelector("#horus-log-company").value.trim();
+      const titleVal = overlay.querySelector("#horus-log-title").value.trim();
+      const locationVal = overlay.querySelector("#horus-log-location").value.trim();
+      const notesVal = overlay.querySelector("#horus-log-notes").value.trim();
+      const errEl = overlay.querySelector("#horus-log-error");
+      const confirmBtn = overlay.querySelector("#horus-log-confirm");
+      if (!companyVal || !titleVal) {
+        errEl.textContent = "Company and Job Title are required.";
+        errEl.style.display = "block";
+        return;
+      }
+      confirmBtn.textContent = "Saving…";
+      confirmBtn.disabled = true;
+      try {
+        await fetch("http://127.0.0.1:9741/applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile_id: profileId,
+            company: companyVal,
+            title: titleVal,
+            location: locationVal,
+            status: "applied",
+            salary_min: null,
+            salary_max: null,
+            ats_platform: ats,
+            job_url: window.location.href,
+            resume_variant_id: variantId,
+            notes: notesVal,
+            applied_at: (/* @__PURE__ */ new Date()).toISOString()
+          })
+        });
+        close();
+        const countEl = besPanel?.querySelector("#horus-filled-count");
+        if (countEl) {
+          countEl.textContent = "✓ Application logged";
+          countEl.style.color = "#4caf50";
+        }
+      } catch {
+        errEl.textContent = "Could not reach Ra. Is it running?";
+        errEl.style.display = "block";
+        confirmBtn.textContent = "Log It";
+        confirmBtn.disabled = false;
+      }
+    });
+  }
+  function watchForSubmission(ats, profileId, variantId) {
+    let submitArmed = false;
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest('button, [role="button"], input[type="submit"]');
+      if (!btn) return;
+      const text = btn.textContent?.trim() ?? "";
+      if (/^(submit|apply now|complete application|submit application)$/i.test(text)) {
+        submitArmed = true;
+        setTimeout(() => {
+          submitArmed = false;
+        }, 3e4);
+      }
+    }, true);
+    let lastUrl = window.location.href;
+    const observer = new MutationObserver(() => {
+      if (window.location.href === lastUrl) return;
+      lastUrl = window.location.href;
+      const isConfirmation = /thank|applied|confirm|success|complete/i.test(window.location.pathname) || /thank|applied|confirm|success|complete/i.test(document.title);
+      if (submitArmed && isConfirmation) {
+        submitArmed = false;
+        setTimeout(() => openLogModal(ats, profileId, variantId), 800);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
   async function init() {
     const ats = detectAts(window.location.href);
     if (!ats) return;
@@ -548,6 +698,9 @@
           const profile = profiles.find((p) => p.id === activeProfileId) ?? null;
           const variant = variants.find((v) => v.id === activeVariantId) ?? variants.find((v) => v.is_default) ?? variants[0] ?? null;
           updateBesPanel(profile, variant);
+          if (profile) {
+            watchForSubmission(ats.name, profile.id, variant?.id ?? null);
+          }
         } catch {
           updateBesPanel(null, null);
         }
