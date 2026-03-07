@@ -207,9 +207,57 @@ const US_STATES: Record<string, string> = {
   WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming', DC: 'District of Columbia',
 };
 
-function expandStateValue(category: FieldCategory, value: string): string {
+// Common country code / abbreviation → full name as ATS dropdowns show it
+const COUNTRIES: Record<string, string> = {
+  US: 'United States of America',
+  USA: 'United States of America',
+  'UNITED STATES': 'United States of America',
+  UK: 'United Kingdom',
+  'UNITED KINGDOM': 'United Kingdom',
+  GB: 'United Kingdom',
+  CA: 'Canada',
+  CANADA: 'Canada',
+  AU: 'Australia',
+  AUSTRALIA: 'Australia',
+  NZ: 'New Zealand',
+  DE: 'Germany',
+  GERMANY: 'Germany',
+  FR: 'France',
+  FRANCE: 'France',
+  IN: 'India',
+  INDIA: 'India',
+  MX: 'Mexico',
+  MEXICO: 'Mexico',
+  BR: 'Brazil',
+  BRAZIL: 'Brazil',
+  JP: 'Japan',
+  JAPAN: 'Japan',
+  CN: 'China',
+  SG: 'Singapore',
+  IE: 'Ireland',
+  NL: 'Netherlands',
+  SE: 'Sweden',
+  NO: 'Norway',
+  DK: 'Denmark',
+  FI: 'Finland',
+  CH: 'Switzerland',
+  ES: 'Spain',
+  IT: 'Italy',
+  PL: 'Poland',
+  PT: 'Portugal',
+  ZA: 'South Africa',
+  NG: 'Nigeria',
+  KE: 'Kenya',
+  PH: 'Philippines',
+  IL: 'Israel',
+};
+
+function expandValue(category: FieldCategory, value: string): string {
   if (category === 'state') {
     return US_STATES[value.toUpperCase()] ?? value;
+  }
+  if (category === 'country') {
+    return COUNTRIES[value.toUpperCase()] ?? value;
   }
   return value;
 }
@@ -239,7 +287,7 @@ async function fillField(field: DetectedField, value: string): Promise<boolean> 
   const el = field.element;
 
   if (el instanceof HTMLButtonElement && el.getAttribute('aria-haspopup') === 'listbox') {
-    const ok = await fillAriaListbox(el, expandStateValue(field.category, value));
+    const ok = await fillAriaListbox(el, expandValue(field.category, value));
     if (ok) {
       el.style.outline = '2px solid #f5a623';
       el.style.outlineOffset = '2px';
