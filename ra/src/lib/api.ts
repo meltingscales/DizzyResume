@@ -20,6 +20,7 @@ import type {
 
 export const api = {
   profiles: {
+    get: (id: string) => invoke<Profile>('get_profile', { id }),
     list: () => invoke<Profile[]>('get_profiles'),
     create: (input: CreateProfileInput) =>
       invoke<Profile>('create_profile', { input }),

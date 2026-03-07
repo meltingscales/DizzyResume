@@ -31,6 +31,37 @@ fn compute_age(applied_at: &Option<String>, created_at: &str) -> String {
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 
+fn fetch_profile(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<Profile> {
+    conn.query_row(
+        "SELECT id, name, email, phone, city, state, zip_code, country,
+                linkedin_url, website, created_at, updated_at
+         FROM profiles WHERE id=?1",
+        [id],
+        |row| {
+            Ok(Profile {
+                id: row.get("id")?,
+                name: row.get("name")?,
+                email: row.get("email")?,
+                phone: row.get("phone")?,
+                city: row.get("city")?,
+                state: row.get("state")?,
+                zip_code: row.get("zip_code")?,
+                country: row.get("country")?,
+                linkedin_url: row.get("linkedin_url")?,
+                website: row.get("website")?,
+                created_at: row.get("created_at")?,
+                updated_at: row.get("updated_at")?,
+            })
+        },
+    )
+}
+
+#[tauri::command]
+pub fn get_profile(db: State<'_, Database>, id: String) -> Result<Profile, AppError> {
+    let conn = db.0.lock().unwrap();
+    fetch_profile(&conn, &id).map_err(AppError::from)
+}
+
 #[tauri::command]
 pub fn get_profiles(db: State<'_, Database>) -> Result<Vec<Profile>, AppError> {
     let conn = db.0.lock().unwrap();
@@ -116,20 +147,7 @@ pub fn update_profile(
     if rows == 0 {
         return Err(AppError::NotFound(format!("profile {id}")));
     }
-    Ok(Profile {
-        id,
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        city: input.city,
-        state: input.state,
-        zip_code: input.zip_code,
-        country: input.country,
-        linkedin_url: input.linkedin_url,
-        website: input.website,
-        created_at: String::new(), // not needed by caller after update
-        updated_at: now,
-    })
+    fetch_profile(&conn, &id).map_err(AppError::from)
 }
 
 #[tauri::command]

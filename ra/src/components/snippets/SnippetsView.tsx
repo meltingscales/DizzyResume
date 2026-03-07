@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Library, Copy, Edit, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { SnippetModal } from './SnippetModal';
 import type { Snippet } from '../../types';
 
 export function SnippetsView() {
@@ -10,6 +11,7 @@ export function SnippetsView() {
   const [filterTag, setFilterTag] = useState('all');
   const [search, setSearch] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ open: boolean; snippet?: Snippet }>({ open: false });
 
   useEffect(() => {
     api.snippets
@@ -30,11 +32,18 @@ export function SnippetsView() {
     return matchesTag && matchesSearch;
   });
 
+  const handleSave = (saved: Snippet) => {
+    setSnippets((prev) => {
+      const exists = prev.find((s) => s.id === saved.id);
+      return exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
+    });
+    setModal({ open: false });
+  };
+
   const handleCopy = async (snippet: Snippet) => {
     await navigator.clipboard.writeText(snippet.content);
     setCopied(snippet.id);
     setTimeout(() => setCopied(null), 1500);
-    // Record use in background — don't await
     api.snippets.recordUse(snippet.id).then(() => {
       setSnippets((prev) =>
         prev.map((s) => (s.id === snippet.id ? { ...s, use_count: s.use_count + 1 } : s))
@@ -44,7 +53,6 @@ export function SnippetsView() {
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Snippets</h1>
@@ -52,13 +60,15 @@ export function SnippetsView() {
             Reusable text blocks for common questions and fields
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setModal({ open: true })}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           New Snippet
         </button>
       </div>
 
-      {/* Filter row */}
       <div className="flex gap-3 mb-6">
         <select
           value={filterTag}
@@ -74,7 +84,7 @@ export function SnippetsView() {
         </select>
         <input
           type="text"
-          placeholder="Search snippets..."
+          placeholder="Search snippets…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 px-3 py-2 bg-card border border-border rounded-md text-sm"
@@ -90,7 +100,7 @@ export function SnippetsView() {
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          Loading snippets...
+          Loading snippets…
         </div>
       ) : (
         <div className="space-y-3">
@@ -133,6 +143,7 @@ export function SnippetsView() {
                   <button
                     className="p-2 hover:bg-secondary rounded-md transition-colors"
                     title="Edit"
+                    onClick={() => setModal({ open: true, snippet })}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -141,21 +152,31 @@ export function SnippetsView() {
             </div>
           ))}
 
-          {filtered.length === 0 && !loading && (
+          {filtered.length === 0 && (
             <p className="text-center text-muted-foreground py-8 text-sm">
               {snippets.length === 0
-                ? 'No snippets yet.'
+                ? 'No snippets yet. Click "New Snippet" to add one.'
                 : 'No snippets match your filter.'}
             </p>
           )}
 
-          {/* Add new */}
-          <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer">
+          <button
+            onClick={() => setModal({ open: true })}
+            className="w-full border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+          >
             <Plus className="w-10 h-10 mb-2" />
             <p className="font-medium">New Snippet</p>
             <p className="text-sm">Save a reusable text block</p>
-          </div>
+          </button>
         </div>
+      )}
+
+      {modal.open && (
+        <SnippetModal
+          snippet={modal.snippet}
+          onClose={() => setModal({ open: false })}
+          onSave={handleSave}
+        />
       )}
     </div>
   );

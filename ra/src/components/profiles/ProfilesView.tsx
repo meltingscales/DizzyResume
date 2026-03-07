@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { ProfileCard } from '../ui/ProfileCard';
+import { ProfileModal } from './ProfileModal';
 import { api } from '../../lib/api';
 import type { Profile, ProfileStats } from '../../types';
 
@@ -9,24 +10,34 @@ export function ProfilesView() {
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ open: boolean; profile?: Profile }>({ open: false });
+
+  const loadStats = (profileList: Profile[]) => {
+    if (profileList.length > 0) {
+      api.profiles.stats(profileList[0].id).then(setStats).catch(() => null);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
     api.profiles
       .list()
       .then((p) => {
         setProfiles(p);
-        if (p.length > 0) {
-          return api.profiles.stats(p[0].id);
-        }
-        return null;
-      })
-      .then((s) => {
-        if (s) setStats(s);
+        loadStats(p);
       })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSave = (saved: Profile) => {
+    setProfiles((prev) => {
+      const exists = prev.find((p) => p.id === saved.id);
+      const next = exists ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved];
+      loadStats(next);
+      return next;
+    });
+    setModal({ open: false });
+  };
 
   const totalApps = stats?.total_applications ?? 0;
   const thisWeek = stats?.this_week ?? 0;
@@ -42,7 +53,10 @@ export function ProfilesView() {
             Manage your user profiles and personal information
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setModal({ open: true })}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           New Profile
         </button>
@@ -68,7 +82,7 @@ export function ProfilesView() {
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          Loading profiles...
+          Loading profiles…
         </div>
       ) : error ? (
         <div className="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/30 text-sm">
@@ -77,14 +91,29 @@ export function ProfilesView() {
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {profiles.map((profile) => (
-            <ProfileCard key={profile.id} profile={profile} />
+            <ProfileCard
+              key={profile.id}
+              profile={profile}
+              onEdit={() => setModal({ open: true, profile })}
+            />
           ))}
-          <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer">
+          <button
+            onClick={() => setModal({ open: true })}
+            className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+          >
             <Plus className="w-12 h-12 mb-2" />
             <p className="font-medium">Add New Profile</p>
             <p className="text-sm">Create a new profile</p>
-          </div>
+          </button>
         </div>
+      )}
+
+      {modal.open && (
+        <ProfileModal
+          profile={modal.profile}
+          onClose={() => setModal({ open: false })}
+          onSave={handleSave}
+        />
       )}
     </div>
   );

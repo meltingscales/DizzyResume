@@ -4,10 +4,11 @@ import type { Template } from '../../types';
 interface TemplateCardProps {
   template: Template;
   Icon: LucideIcon;
+  onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export function TemplateCard({ template, Icon, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, Icon, onEdit, onDelete }: TemplateCardProps) {
   const timeAgo = (isoString?: string | null) => {
     if (!isoString) return 'Never';
     const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -29,7 +30,7 @@ export function TemplateCard({ template, Icon, onDelete }: TemplateCardProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Edit">
+          <button onClick={onEdit} className="p-2 hover:bg-secondary rounded-md transition-colors" title="Edit">
             <Edit className="w-4 h-4" />
           </button>
           <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Use">

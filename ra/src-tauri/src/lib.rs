@@ -20,6 +20,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             // Profiles
+            get_profile,
             get_profiles,
             create_profile,
             update_profile,

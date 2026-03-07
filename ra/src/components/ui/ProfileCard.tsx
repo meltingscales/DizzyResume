@@ -3,9 +3,10 @@ import type { Profile } from '../../types';
 
 interface ProfileCardProps {
   profile: Profile;
+  onEdit?: () => void;
 }
 
-export function ProfileCard({ profile }: ProfileCardProps) {
+export function ProfileCard({ profile, onEdit }: ProfileCardProps) {
   const timeAgo = (isoString: string) => {
     const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
     if (seconds < 60) return 'Just now';
@@ -32,7 +33,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Edit">
+          <button onClick={onEdit} className="p-2 hover:bg-secondary rounded-md transition-colors" title="Edit">
             <Edit className="w-4 h-4" />
           </button>
           <button className="p-2 hover:bg-secondary rounded-md transition-colors" title="Export">
@@ -55,7 +56,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
       </div>
 
       <div className="flex gap-2">
-        <button className="flex-1 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
+        <button onClick={onEdit} className="flex-1 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
           Edit
         </button>
         <button className="flex-1 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors">
