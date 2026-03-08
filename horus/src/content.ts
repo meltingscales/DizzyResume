@@ -16,7 +16,7 @@ const FIELD_PATTERNS: Array<{ category: FieldCategory; patterns: RegExp[] }> = [
   },
   {
     category: 'last_name',
-    patterns: [/last.?name|lname|family.?name|surname/i],
+    patterns: [/last.?name|\blname\b|family.?name|surname/i],
   },
   {
     category: 'full_name',
@@ -100,8 +100,11 @@ function classifyField(el: HTMLElement): {
   const name = (el.getAttribute('name') ?? '').toLowerCase();
   const id = el.id.toLowerCase();
 
-  // Phone extension fields contain "extension" in name/id — not a phone number
+  // Fields we never fill — bail out early
   if (/extension/.test(name) || /extension/.test(id)) {
+    return { category: 'unknown', confidence: 'low' };
+  }
+  if (/middle.?name|middlename/i.test(name) || /middle.?name|middlename/i.test(id) || /middle.?name/i.test(label)) {
     return { category: 'unknown', confidence: 'low' };
   }
 
