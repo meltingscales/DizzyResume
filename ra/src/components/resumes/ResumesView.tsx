@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Plus, FileText, Star, Eye, Loader2 } from 'lucide-react';
+import { Plus, FileText, Star, Eye, Trash2, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useProfile } from '../../lib/ProfileContext';
 import { ResumeVariantModal } from './ResumeVariantModal';
 import { ResumePreviewModal } from './ResumePreviewModal';
 import type { ResumeVariant } from '../../types';
 
 export function ResumesView() {
-  const [profileId, setProfileId] = useState<string | null>(null);
+  const { activeProfile } = useProfile();
+  const profileId = activeProfile?.id ?? null;
   const [variants, setVariants] = useState<ResumeVariant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ open: boolean; variant?: ResumeVariant }>({
     open: false,
@@ -16,17 +18,17 @@ export function ResumesView() {
   const [preview, setPreview] = useState<ResumeVariant | null>(null);
 
   useEffect(() => {
-    api.profiles
-      .list()
-      .then((profiles) => {
-        if (profiles.length === 0) return [];
-        setProfileId(profiles[0].id);
-        return api.resumes.list(profiles[0].id);
-      })
+    if (!profileId) {
+      setVariants([]);
+      return;
+    }
+    setLoading(true);
+    api.resumes
+      .list(profileId)
       .then(setVariants)
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   const timeAgo = (isoString: string) => {
     const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -37,6 +39,16 @@ export function ResumesView() {
 
   const wordCount = (content: string) =>
     content.trim() ? content.trim().split(/\s+/).length : 0;
+
+  const handleDelete = async (variant: ResumeVariant) => {
+    if (!confirm(`Delete "${variant.name}"?`)) return;
+    try {
+      await api.resumes.delete(variant.id);
+      setVariants((prev) => prev.filter((v) => v.id !== variant.id));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
 
   const handleSave = (saved: ResumeVariant) => {
     setVariants((prev) => {
@@ -136,6 +148,13 @@ export function ResumesView() {
                   onClick={() => setModal({ open: true, variant })}
                 >
                   Edit
+                </button>
+                <button
+                  className="p-2 hover:bg-destructive/20 rounded-md transition-colors text-muted-foreground hover:text-destructive"
+                  title="Delete"
+                  onClick={() => handleDelete(variant)}
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

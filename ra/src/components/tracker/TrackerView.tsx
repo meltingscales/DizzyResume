@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, ExternalLink, Loader2, Trash2 } from 'lucide-react';
+import { Download, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { KanbanColumn } from '../ui/KanbanColumn';
+import { ApplicationModal } from './ApplicationModal';
 import { api } from '../../lib/api';
-import type { Application, ApplicationStatus } from '../../types';
+import { useProfile } from '../../lib/ProfileContext';
+import type { Application, ApplicationStatus, ResumeVariant } from '../../types';
 
 const columns: { id: ApplicationStatus; label: string; color: string }[] = [
   { id: 'bookmarked',   label: '📌 Bookmarked', color: 'border-l-4 border-l-yellow-500' },
@@ -15,23 +17,33 @@ const columns: { id: ApplicationStatus; label: string; color: string }[] = [
 ];
 
 export function TrackerView() {
+  const { activeProfile } = useProfile();
+  const profileId = activeProfile?.id ?? null;
   const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [variants, setVariants] = useState<ResumeVariant[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<ApplicationStatus | null>(null);
+  const [addModal, setAddModal] = useState(false);
   const draggingId = useRef<string | null>(null);
 
   useEffect(() => {
-    api.profiles
-      .list()
-      .then((profiles) => {
-        if (profiles.length === 0) return [];
-        return api.applications.list(profiles[0].id);
+    if (!profileId) {
+      setApplications([]);
+      return;
+    }
+    setLoading(true);
+    Promise.all([
+      api.applications.list(profileId),
+      api.resumes.list(profileId),
+    ])
+      .then(([apps, vars]) => {
+        setApplications(apps);
+        setVariants(vars);
       })
-      .then(setApplications)
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profileId]);
 
   const handleStatusChange = async (app: Application, newStatus: ApplicationStatus) => {
     try {
@@ -125,14 +137,24 @@ export function TrackerView() {
               Track your job applications across all stages
             </p>
           </div>
-          <button
-            onClick={exportCsv}
-            disabled={applications.length === 0}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAddModal(true)}
+              disabled={!profileId}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              Add Application
+            </button>
+            <button
+              onClick={exportCsv}
+              disabled={applications.length === 0}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-6 mt-4 text-sm">
@@ -149,6 +171,18 @@ export function TrackerView() {
         <div className="mx-4 mt-4 p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/30 text-sm">
           {error}
         </div>
+      )}
+
+      {addModal && profileId && (
+        <ApplicationModal
+          profileId={profileId}
+          variants={variants}
+          onClose={() => setAddModal(false)}
+          onSave={(app) => {
+            setApplications((prev) => [app, ...prev]);
+            setAddModal(false);
+          }}
+        />
       )}
 
       {/* Kanban Board */}

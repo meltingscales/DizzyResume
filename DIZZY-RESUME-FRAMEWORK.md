@@ -225,15 +225,18 @@ Priority targets based on market share and likelihood of encountering them. Henr
 
 ## Build Phases
 
-### Phase 1 — Foundation
+### Phase 1 — Foundation ✅ COMPLETE
 *Time: 2-3 weeks*
 
-- Set up **Ra** (Tauri v2) project with React frontend
-- Design and implement **Ptah's Vault** (SQLite schema) for profiles, templates, application history
-- Build profile CRUD: personal info, work history, education, skills, references
-- Build template manager: create/edit/tag resume content blocks
-- Set up **Hapi's Flow** (local API) on localhost:9741 with basic endpoints
-- Build **Horus** scaffold with Chrome extension popup and content script
+- ✅ Set up **Ra** (Tauri v2) project with React frontend
+- ✅ Design and implement **Ptah's Vault** (SQLite schema) for profiles, templates, application history
+- ✅ Build profile CRUD: personal info, work history, education, skills, references
+- ✅ Build template manager: create/edit/tag resume content blocks
+- ✅ Set up **Hapi's Flow** (local API) on localhost:9741 with basic endpoints
+- ✅ Build **Horus** scaffold with Chrome extension popup and content script
+- ✅ Global active profile context with sidebar switcher (multi-user ready)
+- ✅ Application tracker with manual entry modal + Kanban board + CSV export
+- ✅ **Thoth's Scriptorium** — cover letter assembler with live variable substitution
 
 ### Phase 2 — Core Autofill
 *Time: 3-4 weeks*

@@ -7,6 +7,7 @@ import { TemplatesView } from './components/templates/TemplatesView';
 import { SnippetsView } from './components/snippets/SnippetsView';
 import { DiscoveryView } from './components/discovery/DiscoveryView';
 import { SettingsView } from './components/layout/SettingsView';
+import { ProfileProvider } from './lib/ProfileContext';
 import type { ViewId } from './types';
 import './App.css';
 
@@ -35,17 +36,19 @@ function App() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''}>
-      <div className="flex h-screen bg-background text-foreground overflow-hidden">
-        <Sidebar
-          currentView={currentView}
-          onViewChange={setCurrentView}
-          isDarkMode={isDarkMode}
-          onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
-        />
-        <main className="flex-1 overflow-auto scrollbar-thin">
-          {renderView()}
-        </main>
-      </div>
+      <ProfileProvider>
+        <div className="flex h-screen bg-background text-foreground overflow-hidden">
+          <Sidebar
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            isDarkMode={isDarkMode}
+            onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
+          />
+          <main className="flex-1 overflow-auto scrollbar-thin">
+            {renderView()}
+          </main>
+        </div>
+      </ProfileProvider>
     </div>
   );
 }

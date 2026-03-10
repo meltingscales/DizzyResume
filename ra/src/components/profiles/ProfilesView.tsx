@@ -3,9 +3,11 @@ import { Plus, Loader2 } from 'lucide-react';
 import { ProfileCard } from '../ui/ProfileCard';
 import { ProfileModal } from './ProfileModal';
 import { api } from '../../lib/api';
+import { useProfile } from '../../lib/ProfileContext';
 import type { Profile, ProfileStats } from '../../types';
 
 export function ProfilesView() {
+  const { refreshProfiles } = useProfile();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +39,7 @@ export function ProfilesView() {
       return next;
     });
     setModal({ open: false });
+    refreshProfiles().catch(console.error);
   };
 
   const totalApps = stats?.total_applications ?? 0;
