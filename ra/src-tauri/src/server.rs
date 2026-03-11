@@ -4,9 +4,10 @@
 /// get resume variants for autofill, and log completed applications.
 /// Bound to loopback only — never reachable from outside the machine.
 use axum::{
+    body::Body,
     extract::{Path, State},
     http::{header, Method, StatusCode},
-    response::Json,
+    response::{Json, Response},
     routing::{get, patch, post},
     Router,
 };
@@ -336,6 +337,71 @@ async fn update_application_status(
     Ok(Json(json!({ "id": id, "status": status, "updated_at": now })))
 }
 
+// GET /profiles/:id/files
+async fn list_resume_files(
+    State(db): State<Database>,
+    Path(profile_id): Path<String>,
+) -> ApiResult<Vec<ResumeFile>> {
+    let conn = db.0.lock().unwrap();
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, profile_id, variant_id, label, kind, filename, file_path, size_bytes, created_at
+             FROM resume_files WHERE profile_id=?1 ORDER BY created_at DESC",
+        )
+        .map_err(err500)?;
+    let rows = stmt
+        .query_map([&profile_id], |row| {
+            Ok(ResumeFile {
+                id: row.get(0)?,
+                profile_id: row.get(1)?,
+                variant_id: row.get(2)?,
+                label: row.get(3)?,
+                kind: row.get(4)?,
+                filename: row.get(5)?,
+                file_path: row.get(6)?,
+                size_bytes: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(err500)?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(err500)?;
+    Ok(Json(rows))
+}
+
+// GET /files/:id/download — serves raw PDF bytes to Horus
+async fn download_resume_file(
+    State(db): State<Database>,
+    Path(id): Path<String>,
+) -> Result<Response<Body>, (StatusCode, Json<serde_json::Value>)> {
+    let conn = db.0.lock().unwrap();
+    let (file_path, filename): (String, String) = conn
+        .query_row(
+            "SELECT file_path, filename FROM resume_files WHERE id=?1",
+            [&id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => err404(format!("file '{id}' not found")),
+            _ => err500(e),
+        })?;
+    drop(conn); // release the lock before file I/O
+
+    let bytes = std::fs::read(&file_path).map_err(|e| err500(e))?;
+
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/pdf")
+        .header(
+            header::CONTENT_DISPOSITION,
+            format!("attachment; filename=\"{filename}\""),
+        )
+        .body(Body::from(bytes))
+        .map_err(|e| err500(e))?;
+
+    Ok(response)
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 pub async fn serve(db: Database) {
@@ -349,6 +415,8 @@ pub async fn serve(db: Database) {
         .route("/profiles", get(list_profiles))
         .route("/profiles/:id", get(get_profile))
         .route("/profiles/:id/variants", get(list_variants))
+        .route("/profiles/:id/files", get(list_resume_files))
+        .route("/files/:id/download", get(download_resume_file))
         .route("/snippets", get(list_snippets))
         .route("/snippets/:id/use", post(record_snippet_use))
         .route("/templates", get(list_templates))

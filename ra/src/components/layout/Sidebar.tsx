@@ -9,6 +9,7 @@ import {
   Sun,
   Moon,
   KeyRound,
+  Files,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useProfile } from '../../lib/ProfileContext';
@@ -28,6 +29,7 @@ const navItems = [
   { id: 'snippets' as ViewId, label: 'Snippets', icon: Library },
   { id: 'tracker' as ViewId, label: 'Tracker', icon: BarChart3 },
   { id: 'discovery' as ViewId, label: 'Discovery', icon: Search },
+  { id: 'files' as ViewId, label: 'Files', icon: Files },
   { id: 'vault' as ViewId, label: "Serket's Vault", icon: KeyRound },
   { id: 'settings' as ViewId, label: 'Settings', icon: Settings },
 ];

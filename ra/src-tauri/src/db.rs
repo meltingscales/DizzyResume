@@ -80,6 +80,20 @@ CREATE TABLE IF NOT EXISTS applications (
     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
+-- PDF resume / cover-letter files stored on disk; metadata here.
+CREATE TABLE IF NOT EXISTS resume_files (
+    id          TEXT PRIMARY KEY,
+    profile_id  TEXT NOT NULL,
+    variant_id  TEXT,
+    label       TEXT NOT NULL,
+    kind        TEXT NOT NULL DEFAULT 'resume',
+    filename    TEXT NOT NULL,
+    file_path   TEXT NOT NULL,
+    size_bytes  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
 -- Serket's Vault: one row holds the PBKDF2 salt and an encrypted check-blob
 -- used to verify the master password without storing it.
 CREATE TABLE IF NOT EXISTS vault_meta (

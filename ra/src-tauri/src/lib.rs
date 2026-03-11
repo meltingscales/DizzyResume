@@ -65,6 +65,10 @@ pub fn run() {
             create_application,
             update_application_status,
             delete_application,
+            // Resume Files
+            get_resume_files,
+            import_resume_file,
+            delete_resume_file,
             // Serket's Vault
             vault_is_setup,
             vault_is_unlocked,

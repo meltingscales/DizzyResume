@@ -6,6 +6,7 @@ export type ViewId =
   | 'snippets'
   | 'tracker'
   | 'discovery'
+  | 'files'
   | 'vault'
   | 'settings';
 
@@ -214,4 +215,27 @@ export interface UpdateCredentialInput {
   username: string;
   password: string;
   notes: string;
+}
+
+// ── Resume Files ──────────────────────────────────────────────────────────────
+
+export type ResumeFileKind = 'resume' | 'cover-letter';
+
+export interface ResumeFile {
+  id: string;
+  profile_id: string;
+  variant_id: string | null;
+  label: string;
+  kind: ResumeFileKind;
+  filename: string;
+  file_path: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface ImportResumeFileInput {
+  profile_id: string;
+  variant_id: string | null;
+  label: string;
+  kind: string;
 }

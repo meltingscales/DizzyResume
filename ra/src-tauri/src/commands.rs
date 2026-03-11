@@ -1,5 +1,5 @@
 use chrono::Utc;
-use tauri::State;
+use tauri::{Manager, State};
 use uuid::Uuid;
 
 // ── PDF import ────────────────────────────────────────────────────────────────
@@ -749,6 +749,131 @@ pub fn delete_application(db: State<'_, Database>, id: String) -> Result<(), App
     let rows = conn.execute("DELETE FROM applications WHERE id=?1", [&id])?;
     if rows == 0 {
         return Err(AppError::NotFound(format!("application {id}")));
+    }
+    Ok(())
+}
+
+// ── Resume Files ──────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_resume_files(
+    db: State<'_, Database>,
+    profile_id: String,
+) -> Result<Vec<ResumeFile>, AppError> {
+    let conn = db.0.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, profile_id, variant_id, label, kind, filename, file_path, size_bytes, created_at
+         FROM resume_files WHERE profile_id=?1 ORDER BY created_at DESC",
+    )?;
+    let rows = stmt
+        .query_map([&profile_id], |row| {
+            Ok(ResumeFile {
+                id: row.get(0)?,
+                profile_id: row.get(1)?,
+                variant_id: row.get(2)?,
+                label: row.get(3)?,
+                kind: row.get(4)?,
+                filename: row.get(5)?,
+                file_path: row.get(6)?,
+                size_bytes: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(rows)
+}
+
+#[tauri::command]
+pub async fn import_resume_file(
+    app: tauri::AppHandle,
+    db: State<'_, Database>,
+    input: ImportResumeFileInput,
+) -> Result<ResumeFile, AppError> {
+    use tauri_plugin_dialog::DialogExt;
+
+    // Open native file picker (PDF only)
+    let path = app
+        .dialog()
+        .file()
+        .add_filter("PDF", &["pdf"])
+        .blocking_pick_file()
+        .ok_or_else(|| AppError::InvalidInput("No file selected".into()))?;
+
+    let src_path = match path {
+        tauri_plugin_dialog::FilePath::Path(p) => p,
+        _ => return Err(AppError::InvalidInput("Unsupported path type".into())),
+    };
+    let filename: String = src_path
+        .file_name()
+        .and_then(|n: &std::ffi::OsStr| n.to_str())
+        .unwrap_or("resume.pdf")
+        .to_string();
+
+    // Ensure files directory exists
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e: tauri::Error| AppError::InvalidInput(e.to_string()))?;
+    let files_dir = app_dir.join("files");
+    std::fs::create_dir_all(&files_dir)
+        .map_err(|e| AppError::InvalidInput(format!("Cannot create files dir: {e}")))?;
+
+    // Copy to app data dir with a unique name
+    let id = Uuid::new_v4().to_string();
+    let dest_path = files_dir.join(format!("{id}.pdf"));
+    std::fs::copy(&src_path, &dest_path)
+        .map_err(|e| AppError::InvalidInput(format!("Cannot copy file: {e}")))?;
+
+    let size_bytes = std::fs::metadata(&dest_path)
+        .map(|m| m.len() as i64)
+        .unwrap_or(0);
+
+    let now = Utc::now().to_rfc3339();
+    let file_path = dest_path.to_string_lossy().to_string();
+
+    let conn = db.0.lock().unwrap();
+    conn.execute(
+        "INSERT INTO resume_files (id, profile_id, variant_id, label, kind, filename, file_path, size_bytes, created_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
+        rusqlite::params![
+            id, input.profile_id, input.variant_id, input.label,
+            input.kind, filename, file_path, size_bytes, now,
+        ],
+    )?;
+
+    Ok(ResumeFile {
+        id,
+        profile_id: input.profile_id,
+        variant_id: input.variant_id,
+        label: input.label,
+        kind: input.kind,
+        filename,
+        file_path,
+        size_bytes,
+        created_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn delete_resume_file(db: State<'_, Database>, id: String) -> Result<(), AppError> {
+    let conn = db.0.lock().unwrap();
+    let file_path: Option<String> = conn
+        .query_row(
+            "SELECT file_path FROM resume_files WHERE id=?1",
+            [&id],
+            |r| r.get(0),
+        )
+        .ok();
+
+    let rows = conn.execute("DELETE FROM resume_files WHERE id=?1", [&id])?;
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("resume file {id}")));
+    }
+
+    // Best-effort delete from disk — ignore error if already gone
+    if let Some(path) = file_path {
+        std::fs::remove_file(path).ok();
     }
     Ok(())
 }

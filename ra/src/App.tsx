@@ -8,6 +8,7 @@ import { SnippetsView } from './components/snippets/SnippetsView';
 import { DiscoveryView } from './components/discovery/DiscoveryView';
 import { SettingsView } from './components/layout/SettingsView';
 import { VaultView } from './components/vault/VaultView';
+import { FilesView } from './components/files/FilesView';
 import { ProfileProvider } from './lib/ProfileContext';
 import type { ViewId } from './types';
 import './App.css';
@@ -30,6 +31,8 @@ function App() {
         return <SnippetsView />;
       case 'discovery':
         return <DiscoveryView />;
+      case 'files':
+        return <FilesView />;
       case 'vault':
         return <VaultView />;
       case 'settings':

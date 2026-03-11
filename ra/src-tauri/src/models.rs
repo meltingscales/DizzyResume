@@ -158,6 +158,30 @@ pub struct UpdateSnippetInput {
     pub tags: Vec<String>,
 }
 
+// ── Resume Files ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ResumeFile {
+    pub id: String,
+    pub profile_id: String,
+    pub variant_id: Option<String>,
+    pub label: String,
+    /// "resume" | "cover-letter"
+    pub kind: String,
+    pub filename: String,
+    pub file_path: String,
+    pub size_bytes: i64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImportResumeFileInput {
+    pub profile_id: String,
+    pub variant_id: Option<String>,
+    pub label: String,
+    pub kind: String,
+}
+
 // ── Credential (Serket's Vault) ───────────────────────────────────────────────
 
 /// Returned to the frontend with the password already decrypted.

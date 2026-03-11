@@ -18,6 +18,8 @@ import type {
   Credential,
   CreateCredentialInput,
   UpdateCredentialInput,
+  ResumeFile,
+  ImportResumeFileInput,
 } from '../types';
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
@@ -87,6 +89,14 @@ export const api = {
     updateStatus: (id: string, status: string) =>
       invoke<Application>('update_application_status', { id, input: { status } }),
     delete: (id: string) => invoke<void>('delete_application', { id }),
+  },
+
+  files: {
+    list: (profileId: string) =>
+      invoke<ResumeFile[]>('get_resume_files', { profileId }),
+    import: (input: ImportResumeFileInput) =>
+      invoke<ResumeFile>('import_resume_file', { input }),
+    delete: (id: string) => invoke<void>('delete_resume_file', { id }),
   },
 
   vault: {

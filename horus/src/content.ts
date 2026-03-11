@@ -6,6 +6,7 @@
 import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
 import { detectAts } from './ats/detect';
 import { loadMappings, saveMapping, mappingKey, type MappingStore } from './mappings';
+import { fetchProfileFiles, attachFileToInput } from './files';
 import type { AtsAdapter } from './ats/adapter';
 import { workdayAdapter }          from './ats/workday';
 import { greenhouseAdapter }        from './ats/greenhouse';
@@ -497,6 +498,122 @@ function showUnknownFields(profile: Profile, variant: ResumeVariant | undefined)
   }
 }
 
+// ── File upload helpers ───────────────────────────────────────────────────────
+
+/** Find visible input[type=file] elements likely intended for resume/CV uploads. */
+function scanFileInputs(): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll<HTMLInputElement>('input[type=file]')).filter(
+    (el) => {
+      if (el.offsetParent === null) return false;
+      // Workday uses a custom upload widget — DataTransfer injection won't work
+      if (currentAdapter?.id === 'workday') return false;
+      const label = getFieldLabel(el).toLowerCase();
+      const accept = (el.getAttribute('accept') ?? '').toLowerCase();
+      // Include if it accepts PDFs, is a generic file input, or has a resume-like label
+      return (
+        accept.includes('pdf') ||
+        accept === '' ||
+        accept === '*' ||
+        /resume|cv|curriculum|upload|attach|document/i.test(label)
+      );
+    },
+  );
+}
+
+/** Render the "📎 File Uploads" section in the Bes panel after fill completes. */
+async function showFileUploadSection(
+  profile: Profile,
+  variant: ResumeVariant | undefined,
+): Promise<void> {
+  if (!besPanel) return;
+  const section = besPanel.querySelector<HTMLElement>('#horus-file-section');
+  const listEl = besPanel.querySelector<HTMLElement>('#horus-file-list');
+  if (!section || !listEl) return;
+
+  const inputs = scanFileInputs();
+  if (inputs.length === 0) { section.style.display = 'none'; return; }
+
+  const files = await fetchProfileFiles(profile.id);
+  section.style.display = 'block';
+  listEl.innerHTML = '';
+
+  if (files.length === 0) {
+    listEl.innerHTML = '<div style="font-size:11px;color:#888;">No PDFs stored — import files in Ra.</div>';
+    return;
+  }
+
+  // Separate resumes and cover letters for logical ordering
+  const resumes = files.filter((f) => f.kind === 'resume');
+  const coverLetters = files.filter((f) => f.kind === 'cover-letter');
+  const orderedFiles = [...resumes, ...coverLetters];
+
+  inputs.forEach((input, idx) => {
+    const inputLabel = getFieldLabel(input) || `File upload ${idx + 1}`;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:8px;';
+
+    // Label
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size:10px;color:#aaa;margin-bottom:3px;';
+    labelEl.textContent = inputLabel;
+    row.appendChild(labelEl);
+
+    // File selector
+    const select = document.createElement('select');
+    select.style.cssText =
+      'width:100%;padding:4px 6px;background:#1a1a2e;color:#e8e8f0;border:1px solid #333;border-radius:4px;font-size:11px;margin-bottom:4px;';
+
+    orderedFiles.forEach((f) => {
+      const opt = new Option(
+        `${f.kind === 'cover-letter' ? '📝 ' : '📄 '}${f.label}`,
+        f.id,
+      );
+      opt.dataset.filename = f.filename;
+      // Pre-select: prefer variant-linked file, then first resume
+      if (variant && f.variant_id === variant.id) select.value = f.id;
+      select.appendChild(opt);
+    });
+    if (!select.value && resumes.length > 0) select.value = resumes[0].id;
+    row.appendChild(select);
+
+    // Attach button + status
+    const attachBtn = document.createElement('button');
+    attachBtn.textContent = 'Attach';
+    attachBtn.style.cssText =
+      'padding:4px 10px;background:#f5a623;color:#000;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;';
+
+    const statusEl = document.createElement('span');
+    statusEl.style.cssText = 'font-size:10px;color:#22c55e;margin-left:6px;';
+
+    attachBtn.addEventListener('click', async () => {
+      const selectedId = select.value;
+      const selectedOpt = select.querySelector<HTMLOptionElement>(`option[value="${selectedId}"]`);
+      const filename = selectedOpt?.dataset.filename ?? 'resume.pdf';
+      attachBtn.disabled = true;
+      attachBtn.textContent = '…';
+      try {
+        await attachFileToInput(input, selectedId, filename);
+        statusEl.textContent = 'Attached ✓';
+        attachBtn.textContent = 'Attach';
+      } catch {
+        statusEl.textContent = 'Failed';
+        statusEl.style.color = '#f87171';
+        attachBtn.textContent = 'Attach';
+      } finally {
+        attachBtn.disabled = false;
+      }
+    });
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;align-items:center;';
+    btnRow.appendChild(attachBtn);
+    btnRow.appendChild(statusEl);
+    row.appendChild(btnRow);
+    listEl.appendChild(row);
+  });
+}
+
 // ── Bes Panel — floating quick-fill sidebar ───────────────────────────────────
 
 let besPanel: HTMLElement | null = null;
@@ -547,6 +664,10 @@ function createBesPanel(ats: string): HTMLElement {
     <div id="horus-unknown-fields" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
       <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Unmapped Fields</div>
       <div id="horus-unknown-list"></div>
+    </div>
+    <div id="horus-file-section" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
+      <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">📎 File Uploads</div>
+      <div id="horus-file-list"></div>
     </div>
   `;
 
@@ -706,6 +827,7 @@ function updateBesPanel(
     if (countEl) countEl.textContent = `${n} field${n !== 1 ? 's' : ''} filled`;
     if (undoBtn) undoBtn.style.color = '#fff';
     showUnknownFields(profile, variant ?? undefined);
+    void showFileUploadSection(profile, variant ?? undefined);
   });
 
   snippetBtn?.addEventListener('click', () => { openSnippetModal(); });

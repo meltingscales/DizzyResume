@@ -248,7 +248,7 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - ✅ Lever adapter — `urls[LinkedIn]`/`urls[Portfolio]` extra patterns, Google Places autocomplete cleanup, Twitter/Other skip
 - ✅ Floating sidebar UI (**Bes panel**) — draggable, profile/variant status, Fill All, Undo, snippet picker
 - ✅ Application auto-logging — submission detection + **Seshat** log modal in-browser
-- ⏭ File upload automation — deferred to Phase 3 (requires PDF file storage in Ra, not yet built)
+- ✅ File upload automation — PDF storage in Ra + DataTransfer injection in Horus
 
 ### Phase 3 — Hard Mode
 *Time: 3-4 weeks*
@@ -260,7 +260,7 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - ✅ Generic fallback — "Try on this page" popup button injects Horus on any site via `chrome.scripting`; runs without ATS detection gate
 - ✅ User-assisted field mapping — after Fill All, unclassified fields appear in the Bes panel with a category dropdown and "Map" button; immediately fills and saves the mapping
 - ✅ Mapping persistence — stored in `chrome.storage.local` keyed by `hostname:label`; applied automatically on every subsequent fill via `classifyField()`
-- File upload automation for resume/cover letter PDFs (requires PDF storage in Ra)
+- ✅ File upload automation for resume/cover letter PDFs (DataTransfer API via Horus)
 
 ### Phase 4 — Tracker & Polish ✅ COMPLETE
 *Time: 2-3 weeks*
