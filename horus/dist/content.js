@@ -57,7 +57,7 @@
     }
     return null;
   }
-  const SKIP_LABEL = new RegExp(
+  const SKIP_LABEL$1 = new RegExp(
     [
       "phone\\s*(device\\s*)?type",
       // "Phone Device Type" dropdown
@@ -87,17 +87,17 @@
     ].join("|"),
     "i"
   );
-  const STEP_NAV = /save\s+and\s+continue|next\s+step|\bnext\b|\bback\b|previous|cancel|save\s+for\s+later/i;
-  const FINAL_SUBMIT = /\bapply\b|^submit$|apply\s+now|review\s+application|complete\s+application|submit\s+application|finish\s+application/i;
+  const STEP_NAV$1 = /save\s+and\s+continue|next\s+step|\bnext\b|\bback\b|previous|cancel|save\s+for\s+later/i;
+  const FINAL_SUBMIT$1 = /\bapply\b|^submit$|apply\s+now|review\s+application|complete\s+application|submit\s+application|finish\s+application/i;
   const workdayAdapter = {
     id: "workday",
     shouldSkip(_el, label) {
-      return SKIP_LABEL.test(label);
+      return SKIP_LABEL$1.test(label);
     },
     isSubmitButton(el) {
       const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
-      if (STEP_NAV.test(text)) return false;
-      if (FINAL_SUBMIT.test(text)) return true;
+      if (STEP_NAV$1.test(text)) return false;
+      if (FINAL_SUBMIT$1.test(text)) return true;
       return false;
     }
   };
@@ -159,11 +159,79 @@
       return /submit application/i.test(text);
     }
   };
+  const SKIP_LABEL = new RegExp(
+    [
+      // Name fields we don't have data for
+      "\\bsuffix\\b",
+      // "Suffix" (Jr., Sr., III)
+      "preferred\\s+name",
+      // "Preferred Name"
+      "\\bnickname\\b",
+      // Phone type selector
+      "phone\\s*type",
+      // "Phone Type" (Home/Mobile/Work)
+      "country\\s*(phone|dialing)\\s*code",
+      "dialing\\s*code",
+      // Age & authorization
+      "at\\s+least\\s+18",
+      // "Are you at least 18 years of age?"
+      "\\b18\\s+years\\b",
+      "legally\\s+authorized",
+      "authorized\\s+to\\s+work",
+      "work\\s+authorization",
+      "require\\s+sponsorship",
+      "visa\\s+sponsorship",
+      // Former employee
+      "previously\\s+(worked|employed)",
+      "former\\s+employee",
+      "previously\\s+applied",
+      // Compensation & availability
+      "desired\\s+(pay|salary|wage|compensation|rate)",
+      "expected\\s+(pay|salary|wage|compensation)",
+      "salary\\s+expectation",
+      "available\\s+start\\s+date",
+      "earliest.*start",
+      "shift\\s+preference",
+      "preferred\\s+shift",
+      "work\\s+type\\s+preference",
+      // Full-time / Part-time / Contract
+      "employment\\s+type\\s+preference",
+      "hours\\s+per\\s+week",
+      // EEO / demographic
+      "\\bgender\\b",
+      "ethnicity",
+      "\\brace\\b",
+      "veteran",
+      "disability",
+      "self.?identif",
+      "pronouns?",
+      // Source of hire
+      "how\\s+(did|do)\\s+you\\s+(hear|find|know|learn)",
+      "source\\s+of\\s+hire",
+      "referral\\s+source"
+    ].join("|"),
+    "i"
+  );
+  const STEP_NAV = /\bnext\b|next\s+section|\bback\b|previous|save\s+&?\s*continue|save\s+and\s+continue|cancel/i;
+  const FINAL_SUBMIT = /^submit$|submit\s+application|finish\s+application/i;
+  const adpAdapter = {
+    id: "adp",
+    shouldSkip(_el, label) {
+      return SKIP_LABEL.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
+      if (STEP_NAV.test(text)) return false;
+      if (FINAL_SUBMIT.test(text)) return true;
+      return false;
+    }
+  };
   const ATS_ADAPTERS = {
     workday: workdayAdapter,
     greenhouse: greenhouseAdapter,
     bamboohr: bamboohrAdapter,
-    lever: leverAdapter
+    lever: leverAdapter,
+    adp: adpAdapter
   };
   let currentAdapter = null;
   let adapterExtraPatterns = [];

@@ -10,6 +10,7 @@ import { workdayAdapter }   from './ats/workday';
 import { greenhouseAdapter } from './ats/greenhouse';
 import { bamboohrAdapter }   from './ats/bamboohr';
 import { leverAdapter }      from './ats/lever';
+import { adpAdapter }        from './ats/adp';
 
 // ── Adapter registry ──────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ const ATS_ADAPTERS: Record<string, AtsAdapter> = {
   greenhouse: greenhouseAdapter,
   bamboohr:   bamboohrAdapter,
   lever:      leverAdapter,
+  adp:        adpAdapter,
 };
 
 /** Active adapter for the current ATS page. Set in init(). */

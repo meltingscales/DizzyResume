@@ -254,9 +254,9 @@ Priority targets based on market share and likelihood of encountering them. Henr
 *Time: 3-4 weeks*
 
 - ✅ Workday adapter — skips device type, dialing code, auth/sponsorship, EEO, source fields; precise step-nav vs final-submit detection ("Save and Continue" ≠ "Apply")
+- ✅ ADP Workforce adapter — skips suffix, preferred name, phone type, age/auth/sponsorship, former-employee, pay/shift/work-type preferences, EEO, source fields; "Next"/"Save & Continue" ≠ "Submit"
 - iCIMS adapter (iframes, legacy DOM)
 - Taleo adapter (session management, complex navigation)
-- ADP Workforce adapter
 - Generic fallback adapter for unknown ATS platforms
 - User-assisted field mapping: 'What should this field map to?'
 - Save and share custom field mappings
