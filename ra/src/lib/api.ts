@@ -15,6 +15,9 @@ import type {
   UpdateSnippetInput,
   Application,
   CreateApplicationInput,
+  Credential,
+  CreateCredentialInput,
+  UpdateCredentialInput,
 } from '../types';
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
@@ -84,5 +87,24 @@ export const api = {
     updateStatus: (id: string, status: string) =>
       invoke<Application>('update_application_status', { id, input: { status } }),
     delete: (id: string) => invoke<void>('delete_application', { id }),
+  },
+
+  vault: {
+    isSetup: () => invoke<boolean>('vault_is_setup'),
+    isUnlocked: () => invoke<boolean>('vault_is_unlocked'),
+    setup: (masterPassword: string) =>
+      invoke<void>('vault_setup', { masterPassword }),
+    unlock: (masterPassword: string) =>
+      invoke<boolean>('vault_unlock', { masterPassword }),
+    lock: () => invoke<void>('vault_lock'),
+    credentials: {
+      list: (profileId: string) =>
+        invoke<Credential[]>('get_credentials', { profileId }),
+      create: (input: CreateCredentialInput) =>
+        invoke<Credential>('create_credential', { input }),
+      update: (id: string, input: UpdateCredentialInput) =>
+        invoke<Credential>('update_credential', { id, input }),
+      delete: (id: string) => invoke<void>('delete_credential', { id }),
+    },
   },
 };

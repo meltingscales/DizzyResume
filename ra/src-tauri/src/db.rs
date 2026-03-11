@@ -79,6 +79,30 @@ CREATE TABLE IF NOT EXISTS applications (
     updated_at          TEXT NOT NULL,
     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
+
+-- Serket's Vault: one row holds the PBKDF2 salt and an encrypted check-blob
+-- used to verify the master password without storing it.
+CREATE TABLE IF NOT EXISTS vault_meta (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    salt        TEXT NOT NULL,
+    check_nonce TEXT NOT NULL,
+    check_blob  TEXT NOT NULL
+);
+
+-- One encrypted credential per ATS account.
+CREATE TABLE IF NOT EXISTS credentials (
+    id              TEXT PRIMARY KEY,
+    profile_id      TEXT NOT NULL,
+    platform        TEXT NOT NULL,
+    login_url       TEXT NOT NULL DEFAULT '',
+    username        TEXT NOT NULL,
+    enc_password    TEXT NOT NULL,
+    nonce           TEXT NOT NULL,
+    notes           TEXT NOT NULL DEFAULT '',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
 ";
 
 pub fn init(path: impl AsRef<std::path::Path>) -> Result<Database> {

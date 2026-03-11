@@ -6,6 +6,7 @@ export type ViewId =
   | 'snippets'
   | 'tracker'
   | 'discovery'
+  | 'vault'
   | 'settings';
 
 // ── Profile ───────────────────────────────────────────────────────────────────
@@ -182,4 +183,35 @@ export interface CreateApplicationInput {
   resume_variant_id: string | null;
   notes: string;
   applied_at: string | null;
+}
+
+// ── Credential (Serket's Vault) ───────────────────────────────────────────────
+
+export interface Credential {
+  id: string;
+  profile_id: string;
+  platform: string;
+  login_url: string;
+  username: string;
+  password: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCredentialInput {
+  profile_id: string;
+  platform: string;
+  login_url: string;
+  username: string;
+  password: string;
+  notes: string;
+}
+
+export interface UpdateCredentialInput {
+  platform: string;
+  login_url: string;
+  username: string;
+  password: string;
+  notes: string;
 }

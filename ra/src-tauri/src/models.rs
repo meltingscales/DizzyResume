@@ -158,6 +158,42 @@ pub struct UpdateSnippetInput {
     pub tags: Vec<String>,
 }
 
+// ── Credential (Serket's Vault) ───────────────────────────────────────────────
+
+/// Returned to the frontend with the password already decrypted.
+#[derive(Debug, Serialize, Clone)]
+pub struct Credential {
+    pub id: String,
+    pub profile_id: String,
+    pub platform: String,
+    pub login_url: String,
+    pub username: String,
+    /// Decrypted in-process — never stored plaintext in DB.
+    pub password: String,
+    pub notes: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCredentialInput {
+    pub profile_id: String,
+    pub platform: String,
+    pub login_url: String,
+    pub username: String,
+    pub password: String,
+    pub notes: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCredentialInput {
+    pub platform: String,
+    pub login_url: String,
+    pub username: String,
+    pub password: String,
+    pub notes: String,
+}
+
 // ── Application ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

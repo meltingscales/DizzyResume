@@ -13,6 +13,7 @@ pub fn extract_pdf_text(path: String) -> Result<String, AppError> {
 use crate::db::Database;
 use crate::error::AppError;
 use crate::models::*;
+use crate::vault::{self, VaultState};
 
 fn now() -> String {
     Utc::now().to_rfc3339()
@@ -748,6 +749,233 @@ pub fn delete_application(db: State<'_, Database>, id: String) -> Result<(), App
     let rows = conn.execute("DELETE FROM applications WHERE id=?1", [&id])?;
     if rows == 0 {
         return Err(AppError::NotFound(format!("application {id}")));
+    }
+    Ok(())
+}
+
+// ── Serket's Vault ────────────────────────────────────────────────────────────
+
+/// Returns true if the vault has been set up (vault_meta row exists).
+#[tauri::command]
+pub fn vault_is_setup(db: State<'_, Database>) -> bool {
+    let conn = db.0.lock().unwrap();
+    conn.query_row("SELECT COUNT(*) FROM vault_meta", [], |r| r.get::<_, i64>(0))
+        .unwrap_or(0)
+        > 0
+}
+
+/// Returns true if the vault key is currently held in memory.
+#[tauri::command]
+pub fn vault_is_unlocked(vault: State<'_, VaultState>) -> bool {
+    vault.is_unlocked()
+}
+
+/// First-time setup: derive a key from `master_password`, persist the salt and
+/// a check-blob, and unlock the vault for this session.
+#[tauri::command]
+pub fn vault_setup(
+    db: State<'_, Database>,
+    vault: State<'_, VaultState>,
+    master_password: String,
+) -> Result<(), AppError> {
+    let salt = vault::generate_salt();
+    let key = vault::derive_key(&master_password, &salt);
+    let (check_blob, check_nonce) =
+        vault::make_check_blob(&key).map_err(AppError::InvalidInput)?;
+
+    let conn = db.0.lock().unwrap();
+    conn.execute(
+        "INSERT INTO vault_meta (id, salt, check_nonce, check_blob) VALUES (1, ?1, ?2, ?3)
+         ON CONFLICT(id) DO UPDATE SET salt=excluded.salt, check_nonce=excluded.check_nonce, check_blob=excluded.check_blob",
+        rusqlite::params![hex::encode(salt), check_nonce, check_blob],
+    )?;
+
+    vault.set_key(key);
+    Ok(())
+}
+
+/// Verify `master_password` against the stored check-blob and unlock this session.
+/// Returns false (not an error) if the password is wrong.
+#[tauri::command]
+pub fn vault_unlock(
+    db: State<'_, Database>,
+    vault: State<'_, VaultState>,
+    master_password: String,
+) -> Result<bool, AppError> {
+    let conn = db.0.lock().unwrap();
+    let (salt_hex, check_nonce, check_blob): (String, String, String) = conn.query_row(
+        "SELECT salt, check_nonce, check_blob FROM vault_meta WHERE id=1",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+
+    let salt = hex::decode(&salt_hex).map_err(|e| AppError::InvalidInput(e.to_string()))?;
+    let key = vault::derive_key(&master_password, &salt);
+
+    if vault::verify_check_blob(&key, &check_blob, &check_nonce) {
+        vault.set_key(key);
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+/// Clear the in-memory key (does not touch the DB).
+#[tauri::command]
+pub fn vault_lock(vault: State<'_, VaultState>) {
+    vault.clear_key();
+}
+
+// ── Credentials CRUD ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_credentials(
+    db: State<'_, Database>,
+    vault: State<'_, VaultState>,
+    profile_id: String,
+) -> Result<Vec<Credential>, AppError> {
+    if !vault.is_unlocked() {
+        return Err(AppError::InvalidInput("Vault is locked".into()));
+    }
+    let conn = db.0.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, profile_id, platform, login_url, username, enc_password, nonce, notes, created_at, updated_at
+         FROM credentials WHERE profile_id=?1 ORDER BY platform ASC, created_at ASC",
+    )?;
+
+    let rows = stmt.query_map([&profile_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, String>(3)?,
+            row.get::<_, String>(4)?,
+            row.get::<_, String>(5)?,
+            row.get::<_, String>(6)?,
+            row.get::<_, String>(7)?,
+            row.get::<_, String>(8)?,
+            row.get::<_, String>(9)?,
+        ))
+    })?;
+
+    let mut out = Vec::new();
+    for row in rows {
+        let (id, profile_id, platform, login_url, username, enc_pw, nonce, notes, created_at, updated_at) = row?;
+        let password = vault
+            .decrypt(&enc_pw, &nonce)
+            .map_err(AppError::InvalidInput)?;
+        out.push(Credential {
+            id,
+            profile_id,
+            platform,
+            login_url,
+            username,
+            password,
+            notes,
+            created_at,
+            updated_at,
+        });
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn create_credential(
+    db: State<'_, Database>,
+    vault: State<'_, VaultState>,
+    input: CreateCredentialInput,
+) -> Result<Credential, AppError> {
+    if !vault.is_unlocked() {
+        return Err(AppError::InvalidInput("Vault is locked".into()));
+    }
+    let (enc_password, nonce) = vault
+        .encrypt(&input.password)
+        .map_err(AppError::InvalidInput)?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+
+    let conn = db.0.lock().unwrap();
+    conn.execute(
+        "INSERT INTO credentials (id, profile_id, platform, login_url, username, enc_password, nonce, notes, created_at, updated_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+        rusqlite::params![
+            id, input.profile_id, input.platform, input.login_url,
+            input.username, enc_password, nonce, input.notes, now, now,
+        ],
+    )?;
+
+    Ok(Credential {
+        id,
+        profile_id: input.profile_id,
+        platform: input.platform,
+        login_url: input.login_url,
+        username: input.username,
+        password: input.password,
+        notes: input.notes,
+        created_at: now.clone(),
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn update_credential(
+    db: State<'_, Database>,
+    vault: State<'_, VaultState>,
+    id: String,
+    input: UpdateCredentialInput,
+) -> Result<Credential, AppError> {
+    if !vault.is_unlocked() {
+        return Err(AppError::InvalidInput("Vault is locked".into()));
+    }
+    let (enc_password, nonce) = vault
+        .encrypt(&input.password)
+        .map_err(AppError::InvalidInput)?;
+
+    let now = Utc::now().to_rfc3339();
+    let conn = db.0.lock().unwrap();
+    let rows = conn.execute(
+        "UPDATE credentials SET platform=?1, login_url=?2, username=?3,
+         enc_password=?4, nonce=?5, notes=?6, updated_at=?7 WHERE id=?8",
+        rusqlite::params![
+            input.platform, input.login_url, input.username,
+            enc_password, nonce, input.notes, now, id,
+        ],
+    )?;
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("credential {id}")));
+    }
+
+    let profile_id: String = conn.query_row(
+        "SELECT profile_id FROM credentials WHERE id=?1",
+        [&id],
+        |r| r.get(0),
+    )?;
+    let created_at: String = conn.query_row(
+        "SELECT created_at FROM credentials WHERE id=?1",
+        [&id],
+        |r| r.get(0),
+    )?;
+
+    Ok(Credential {
+        id,
+        profile_id,
+        platform: input.platform,
+        login_url: input.login_url,
+        username: input.username,
+        password: input.password,
+        notes: input.notes,
+        created_at,
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn delete_credential(db: State<'_, Database>, id: String) -> Result<(), AppError> {
+    let conn = db.0.lock().unwrap();
+    let rows = conn.execute("DELETE FROM credentials WHERE id=?1", [&id])?;
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("credential {id}")));
     }
     Ok(())
 }

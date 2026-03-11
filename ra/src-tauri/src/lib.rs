@@ -3,9 +3,11 @@ mod db;
 mod error;
 mod models;
 mod server;
+mod vault;
 
 use commands::*;
 use tauri::Manager;
+use vault::VaultState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +29,7 @@ pub fn run() {
             });
 
             app.manage(database);
+            app.manage(VaultState::new());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -62,6 +65,16 @@ pub fn run() {
             create_application,
             update_application_status,
             delete_application,
+            // Serket's Vault
+            vault_is_setup,
+            vault_is_unlocked,
+            vault_setup,
+            vault_unlock,
+            vault_lock,
+            get_credentials,
+            create_credential,
+            update_credential,
+            delete_credential,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
