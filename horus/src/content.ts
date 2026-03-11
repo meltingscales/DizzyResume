@@ -5,6 +5,24 @@
 
 import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
 import { detectAts } from './ats/detect';
+import type { AtsAdapter } from './ats/adapter';
+import { greenhouseAdapter } from './ats/greenhouse';
+import { bamboohrAdapter } from './ats/bamboohr';
+import { leverAdapter } from './ats/lever';
+
+// ── Adapter registry ──────────────────────────────────────────────────────────
+
+const ATS_ADAPTERS: Record<string, AtsAdapter> = {
+  greenhouse: greenhouseAdapter,
+  bamboohr:   bamboohrAdapter,
+  lever:      leverAdapter,
+};
+
+/** Active adapter for the current ATS page. Set in init(). */
+let currentAdapter: AtsAdapter | null = null;
+
+/** Extra patterns contributed by the active adapter. Merged into classifyField. */
+let adapterExtraPatterns: Array<{ category: FieldCategory; patterns: RegExp[] }> = [];
 
 // ── Field classification ──────────────────────────────────────────────────────
 
@@ -109,6 +127,14 @@ function classifyField(el: HTMLElement): {
   }
 
   for (const { category, patterns } of FIELD_PATTERNS) {
+    for (const pattern of patterns) {
+      if (pattern.test(label)) return { category, confidence: 'high' };
+      if (pattern.test(name) || pattern.test(id)) return { category, confidence: 'medium' };
+    }
+  }
+
+  // Adapter-supplied extra patterns (checked after generic ones)
+  for (const { category, patterns } of adapterExtraPatterns) {
     for (const pattern of patterns) {
       if (pattern.test(label)) return { category, confidence: 'high' };
       if (pattern.test(name) || pattern.test(id)) return { category, confidence: 'medium' };
@@ -321,10 +347,16 @@ async function fillAll(profile: Profile, variant?: ResumeVariant): Promise<numbe
   const fields = scanFields();
   let filled = 0;
   for (const field of fields) {
+    // Let the adapter veto fields it wants to skip (e.g. EEO demographics)
+    if (currentAdapter?.shouldSkip?.(field.element, field.label)) continue;
     const value = profileValueFor(field.category, profile, variant);
     if (value && await fillField(field, value)) {
       filled++;
     }
+  }
+  // Platform-specific post-fill cleanup (e.g. close autocomplete dropdowns)
+  if (currentAdapter?.afterFill) {
+    await currentAdapter.afterFill(profile, variant);
   }
   return filled;
 }
@@ -706,8 +738,14 @@ function watchForSubmission(ats: string, profileId: string, variantId: string | 
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button, [role="button"], input[type="submit"]');
     if (!btn) return;
-    const text = btn.textContent?.trim() ?? '';
-    if (/^(submit|apply now|complete application|submit application)$/i.test(text)) {
+    const text =
+      btn.textContent?.trim() ??
+      (btn as HTMLInputElement).value?.trim() ??
+      '';
+    const isSubmit =
+      currentAdapter?.isSubmitButton?.(btn) ??
+      /^(submit|apply now|complete application|submit application)$/i.test(text);
+    if (isSubmit) {
       submitArmed = true;
       setTimeout(() => { submitArmed = false; }, 30_000);
     }
@@ -756,6 +794,10 @@ function watchForSubmission(ats: string, profileId: string, variantId: string | 
 async function init(): Promise<void> {
   const ats = detectAts(window.location.href);
   if (!ats) return;
+
+  // Load the platform-specific adapter (or null for generic-only behaviour)
+  currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
+  adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
 
   // Inject Bes panel
   besPanel = createBesPanel(ats.name);

@@ -238,16 +238,17 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - ✅ Application tracker with manual entry modal + Kanban board + CSV export
 - ✅ **Thoth's Scriptorium** — cover letter assembler with live variable substitution
 
-### Phase 2 — Core Autofill
+### Phase 2 — Core Autofill ✅ COMPLETE
 *Time: 3-4 weeks*
 
-- Build **Wadjet's Gaze** (ATS detection engine) with URL pattern matching
-- Generic form field scanner and classifier
-- Greenhouse adapter (easiest ATS to start with)
-- BambooHR adapter (second easiest)
-- Lever adapter
-- Floating sidebar UI in browser (Horus's perch) for field selection and fill control
-- File upload automation for resume/cover letter PDFs
+- ✅ **Wadjet's Gaze** (ATS detection engine) — all 12 platforms in `detect.ts`
+- ✅ Generic form field scanner and classifier — `content.ts`
+- ✅ Greenhouse adapter — EEO field skipping, submit button detection
+- ✅ BambooHR adapter — referral/salary field skipping, submit detection
+- ✅ Lever adapter — `urls[LinkedIn]`/`urls[Portfolio]` extra patterns, Google Places autocomplete cleanup, Twitter/Other skip
+- ✅ Floating sidebar UI (**Bes panel**) — draggable, profile/variant status, Fill All, Undo, snippet picker
+- ✅ Application auto-logging — submission detection + **Seshat** log modal in-browser
+- ⏭ File upload automation — deferred to Phase 3 (requires PDF file storage in Ra, not yet built)
 
 ### Phase 3 — Hard Mode
 *Time: 3-4 weeks*

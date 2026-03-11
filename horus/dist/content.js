@@ -57,6 +57,71 @@
     }
     return null;
   }
+  const EEO_PATTERN = /race|ethnicity|gender|veteran|disability|self.?identif|demographic|pronouns/i;
+  const greenhouseAdapter = {
+    id: "greenhouse",
+    shouldSkip(el, label) {
+      const name = el.getAttribute("name") ?? "";
+      return EEO_PATTERN.test(label) || EEO_PATTERN.test(name) || EEO_PATTERN.test(el.id);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
+      return /submit application/i.test(text);
+    }
+  };
+  const SKIP_PATTERN = /how (did you|do you).*(hear|find|learn)|referral source|desired salary/i;
+  const bamboohrAdapter = {
+    id: "bamboohr",
+    shouldSkip(_el, label) {
+      return SKIP_PATTERN.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      return /^apply$|submit application/i.test(text);
+    }
+  };
+  const leverAdapter = {
+    id: "lever",
+    extraPatterns: [
+      {
+        category: "linkedin",
+        patterns: [/urls\[LinkedIn\]/i]
+      },
+      {
+        category: "website",
+        patterns: [/urls\[Portfolio\]/i, /urls\[GitHub\]/i]
+      }
+    ],
+    shouldSkip(el, label) {
+      const name = el.getAttribute("name") ?? "";
+      if (/urls\[Twitter\]/i.test(name) || /urls\[Other\]/i.test(name)) return true;
+      if (/how.*(hear|find|learn|know)|referral/i.test(label)) return true;
+      return false;
+    },
+    async afterFill() {
+      const locationInput = document.querySelector(
+        'input[name="location"], input[placeholder*="City" i], input[id*="location" i]'
+      );
+      if (locationInput) {
+        locationInput.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true, keyCode: 27 })
+        );
+        await new Promise((r) => setTimeout(r, 100));
+        locationInput.blur();
+      }
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      return /submit application/i.test(text);
+    }
+  };
+  const ATS_ADAPTERS = {
+    greenhouse: greenhouseAdapter,
+    bamboohr: bamboohrAdapter,
+    lever: leverAdapter
+  };
+  let currentAdapter = null;
+  let adapterExtraPatterns = [];
   const FIELD_PATTERNS = [
     {
       category: "first_name",
@@ -145,6 +210,12 @@
       return { category: "unknown", confidence: "low" };
     }
     for (const { category, patterns } of FIELD_PATTERNS) {
+      for (const pattern of patterns) {
+        if (pattern.test(label)) return { category, confidence: "high" };
+        if (pattern.test(name) || pattern.test(id)) return { category, confidence: "medium" };
+      }
+    }
+    for (const { category, patterns } of adapterExtraPatterns) {
       for (const pattern of patterns) {
         if (pattern.test(label)) return { category, confidence: "high" };
         if (pattern.test(name) || pattern.test(id)) return { category, confidence: "medium" };
@@ -377,10 +448,14 @@
     const fields = scanFields();
     let filled = 0;
     for (const field of fields) {
+      if (currentAdapter?.shouldSkip?.(field.element, field.label)) continue;
       const value = profileValueFor(field.category, profile, variant);
       if (value && await fillField(field, value)) {
         filled++;
       }
+    }
+    if (currentAdapter?.afterFill) {
+      await currentAdapter.afterFill(profile, variant);
     }
     return filled;
   }
@@ -695,8 +770,9 @@
     document.addEventListener("click", (e) => {
       const btn = e.target.closest('button, [role="button"], input[type="submit"]');
       if (!btn) return;
-      const text = btn.textContent?.trim() ?? "";
-      if (/^(submit|apply now|complete application|submit application)$/i.test(text)) {
+      const text = btn.textContent?.trim() ?? btn.value?.trim() ?? "";
+      const isSubmit = currentAdapter?.isSubmitButton?.(btn) ?? /^(submit|apply now|complete application|submit application)$/i.test(text);
+      if (isSubmit) {
         submitArmed = true;
         setTimeout(() => {
           submitArmed = false;
@@ -734,6 +810,8 @@
   async function init() {
     const ats = detectAts(window.location.href);
     if (!ats) return;
+    currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
+    adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
     besPanel = createBesPanel(ats.name);
     document.body.appendChild(besPanel);
     besPanel.querySelector("#horus-close")?.addEventListener("click", () => {
