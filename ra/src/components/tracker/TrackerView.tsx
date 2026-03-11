@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { KanbanColumn } from '../ui/KanbanColumn';
 import { ApplicationModal } from './ApplicationModal';
+import { StatsPanel } from './StatsPanel';
 import { api } from '../../lib/api';
 import { useProfile } from '../../lib/ProfileContext';
 import type { Application, ApplicationStatus, ResumeVariant } from '../../types';
@@ -120,12 +121,6 @@ export function TrackerView() {
     URL.revokeObjectURL(url);
   };
 
-  const applied = applications.filter((a) => a.status !== 'bookmarked');
-  const thisWeek = applied.filter((a) => {
-    const days = (Date.now() - new Date(a.created_at).getTime()) / 86400000;
-    return days < 7;
-  });
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -157,13 +152,8 @@ export function TrackerView() {
           </div>
         </div>
 
-        <div className="flex gap-6 mt-4 text-sm">
-          <span>
-            📈 <strong>This Week:</strong> {thisWeek.length} apps
-          </span>
-          <span>
-            📊 <strong>Total Applied:</strong> {applied.length}
-          </span>
+        <div className="mt-4">
+          <StatsPanel profileId={profileId} />
         </div>
       </div>
 

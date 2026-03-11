@@ -203,6 +203,16 @@ pub fn get_profile_stats(
         |row| row.get(0),
     )?;
 
+    // Applications created today (UTC midnight)
+    let today_start = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
+    let today_start_str = today_start.format("%Y-%m-%dT%H:%M:%S%.fZ").to_string();
+    let today: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM applications
+         WHERE profile_id=?1 AND status != 'bookmarked' AND created_at >= ?2",
+        rusqlite::params![profile_id, today_start_str],
+        |row| row.get(0),
+    )?;
+
     // Responded = phone-screen, interview, or offer
     let responded: i64 = conn.query_row(
         "SELECT COUNT(*) FROM applications
@@ -217,10 +227,39 @@ pub fn get_profile_stats(
         0.0
     };
 
+    // Top ATS platforms by usage (non-empty platform, non-bookmarked)
+    let mut stmt = conn.prepare(
+        "SELECT ats_platform, COUNT(*) as cnt FROM applications
+         WHERE profile_id=?1 AND status != 'bookmarked' AND ats_platform != ''
+         GROUP BY ats_platform ORDER BY cnt DESC LIMIT 5",
+    )?;
+    let top_ats: Vec<AtsCount> = stmt
+        .query_map([&profile_id], |row| {
+            Ok(AtsCount {
+                platform: row.get(0)?,
+                count: row.get(1)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // Most-used resume variant name
+    let top_variant: Option<String> = conn.query_row(
+        "SELECT rv.name FROM applications a
+         JOIN resume_variants rv ON a.resume_variant_id = rv.id
+         WHERE a.profile_id=?1 AND a.resume_variant_id IS NOT NULL
+         GROUP BY a.resume_variant_id ORDER BY COUNT(*) DESC LIMIT 1",
+        [&profile_id],
+        |row| row.get(0),
+    ).ok();
+
     Ok(ProfileStats {
         total_applications: total,
         this_week,
+        today,
         response_rate,
+        top_ats,
+        top_variant,
     })
 }
 

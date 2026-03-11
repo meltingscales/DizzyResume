@@ -41,10 +41,18 @@ export interface CreateProfileInput {
   website: string | null;
 }
 
+export interface AtsCount {
+  platform: string;
+  count: number;
+}
+
 export interface ProfileStats {
   total_applications: number;
   this_week: number;
+  today: number;
   response_rate: number;
+  top_ats: AtsCount[];
+  top_variant: string | null;
 }
 
 // ── Resume Variant ────────────────────────────────────────────────────────────

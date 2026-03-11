@@ -51,10 +51,19 @@ pub struct UpdateProfileInput {
 }
 
 #[derive(Debug, Serialize)]
+pub struct AtsCount {
+    pub platform: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ProfileStats {
     pub total_applications: i64,
     pub this_week: i64,
+    pub today: i64,
     pub response_rate: f64,
+    pub top_ats: Vec<AtsCount>,
+    pub top_variant: Option<String>,
 }
 
 // ── Resume Variant ────────────────────────────────────────────────────────────
