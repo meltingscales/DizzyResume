@@ -5,6 +5,7 @@
 
 import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
 import { detectAts } from './ats/detect';
+import { loadMappings, saveMapping, mappingKey, type MappingStore } from './mappings';
 import type { AtsAdapter } from './ats/adapter';
 import { workdayAdapter }   from './ats/workday';
 import { greenhouseAdapter } from './ats/greenhouse';
@@ -27,6 +28,9 @@ let currentAdapter: AtsAdapter | null = null;
 
 /** Extra patterns contributed by the active adapter. Merged into classifyField. */
 let adapterExtraPatterns: Array<{ category: FieldCategory; patterns: RegExp[] }> = [];
+
+/** User-defined field mappings loaded from chrome.storage.local. */
+let savedMappings: MappingStore = {};
 
 // ── Field classification ──────────────────────────────────────────────────────
 
@@ -145,6 +149,12 @@ function classifyField(el: HTMLElement): {
     }
   }
 
+  // User-saved mappings: hostname:label → category (highest priority for unknowns)
+  const mk = `${window.location.hostname}:${label.trim()}`;
+  if (savedMappings[mk]) {
+    return { category: savedMappings[mk], confidence: 'high' };
+  }
+
   // Type-based fallback
   if (el instanceof HTMLInputElement) {
     if (el.type === 'email') return { category: 'email', confidence: 'medium' };
@@ -178,6 +188,24 @@ function scanFields(): DetectedField[] {
       return { element: el, label: getFieldLabel(el), category, confidence };
     })
     .filter((f) => f.category !== 'unknown');
+}
+
+/** Return visible fields that couldn't be classified and weren't adapter-skipped. */
+function scanUnknownFields(): Array<{ element: HTMLElement; label: string }> {
+  const selectors = [
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="checkbox"]):not([type="radio"])',
+    'textarea',
+    'select',
+  ].join(', ');
+
+  return Array.from(document.querySelectorAll<HTMLElement>(selectors))
+    .filter((el) => el.offsetParent !== null)
+    .map((el) => ({ element: el, label: getFieldLabel(el) }))
+    .filter(({ element, label }) => {
+      if (!label.trim()) return false;
+      if (currentAdapter?.shouldSkip?.(element, label)) return false;
+      return classifyField(element).category === 'unknown';
+    });
 }
 
 // ── Field filling ─────────────────────────────────────────────────────────────
@@ -365,6 +393,100 @@ async function fillAll(profile: Profile, variant?: ResumeVariant): Promise<numbe
   return filled;
 }
 
+// ── Unmapped field mapper ─────────────────────────────────────────────────────
+
+const CATEGORY_OPTIONS: [FieldCategory, string][] = [
+  ['first_name',    'First Name'],
+  ['last_name',     'Last Name'],
+  ['full_name',     'Full Name'],
+  ['email',         'Email'],
+  ['phone',         'Phone'],
+  ['address_line1', 'Address Line 1'],
+  ['address_line2', 'Address Line 2'],
+  ['city',          'City'],
+  ['state',         'State / Province'],
+  ['zip',           'ZIP / Postal Code'],
+  ['country',       'Country'],
+  ['linkedin',      'LinkedIn URL'],
+  ['website',       'Website / Portfolio'],
+  ['cover_letter',  'Cover Letter'],
+  ['resume_text',   'Resume Text'],
+];
+
+/**
+ * Render the list of unclassified fields in the Bes panel after a fill.
+ * Each row lets the user pick a category and immediately fill + save the mapping.
+ */
+function showUnknownFields(profile: Profile, variant: ResumeVariant | undefined): void {
+  if (!besPanel) return;
+  const container = besPanel.querySelector<HTMLElement>('#horus-unknown-fields');
+  const list = besPanel.querySelector<HTMLElement>('#horus-unknown-list');
+  if (!container || !list) return;
+
+  const unknowns = scanUnknownFields();
+  if (unknowns.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = '';
+
+  for (const { element, label } of unknowns) {
+    const row = document.createElement('div');
+    row.style.cssText =
+      'display:flex;align-items:center;gap:4px;margin-bottom:5px;';
+
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText =
+      'flex:1;min-width:0;font-size:10px;color:#ccc;overflow:hidden;' +
+      'text-overflow:ellipsis;white-space:nowrap;';
+    labelEl.title = label;
+    labelEl.textContent = label;
+
+    const sel = document.createElement('select');
+    sel.style.cssText =
+      'font-size:10px;padding:2px 4px;background:#0d0d1a;border:1px solid #333;' +
+      'color:#fff;border-radius:4px;max-width:110px;cursor:pointer;';
+    const placeholder = new Option('— map to —', '');
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    sel.appendChild(placeholder);
+    for (const [val, text] of CATEGORY_OPTIONS) {
+      sel.appendChild(new Option(text, val));
+    }
+
+    const mapBtn = document.createElement('button');
+    mapBtn.textContent = 'Map';
+    mapBtn.style.cssText =
+      'font-size:10px;padding:2px 7px;background:#f5a623;color:#000;border:none;' +
+      'border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+
+    mapBtn.addEventListener('click', async () => {
+      const category = sel.value as FieldCategory;
+      if (!category) return;
+
+      // Persist the mapping so it applies on every future fill
+      await saveMapping(window.location.hostname, label, category);
+      savedMappings[mappingKey(window.location.hostname, label)] = category;
+
+      // Immediately fill the field with the now-known value
+      const value = profileValueFor(category, profile, variant);
+      if (value) {
+        await fillField({ element, label, category, confidence: 'high' }, value);
+      }
+
+      row.remove();
+      if (list.children.length === 0) container.style.display = 'none';
+    });
+
+    row.appendChild(labelEl);
+    row.appendChild(sel);
+    row.appendChild(mapBtn);
+    list.appendChild(row);
+  }
+}
+
 // ── Bes Panel — floating quick-fill sidebar ───────────────────────────────────
 
 let besPanel: HTMLElement | null = null;
@@ -412,6 +534,10 @@ function createBesPanel(ats: string): HTMLElement {
       border-radius:6px;cursor:pointer;font-size:12px;
     ">Choose Snippet</button>
     <div id="horus-filled-count" style="text-align:center;font-size:11px;color:#888;margin-top:6px;"></div>
+    <div id="horus-unknown-fields" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
+      <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Unmapped Fields</div>
+      <div id="horus-unknown-list"></div>
+    </div>
   `;
 
   // Draggable
@@ -569,6 +695,7 @@ function updateBesPanel(
     if (fillBtn) fillBtn.disabled = false;
     if (countEl) countEl.textContent = `${n} field${n !== 1 ? 's' : ''} filled`;
     if (undoBtn) undoBtn.style.color = '#fff';
+    showUnknownFields(profile, variant ?? undefined);
   });
 
   snippetBtn?.addEventListener('click', () => { openSnippetModal(); });
@@ -795,32 +922,26 @@ function watchForSubmission(ats: string, profileId: string, variantId: string | 
 
 // ── Initialisation ────────────────────────────────────────────────────────────
 
-async function init(): Promise<void> {
-  const ats = detectAts(window.location.href);
-  if (!ats) return;
-
-  // Load the platform-specific adapter (or null for generic-only behaviour)
-  currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
-  adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
-
-  // Inject Bes panel
-  besPanel = createBesPanel(ats.name);
+/**
+ * Shared panel setup: inject the Bes panel, connect to Ra, load profile.
+ * Called by both init() (known ATS) and initGeneric() (any page).
+ * Pass atsName = 'Generic' and watchSubmit = false for the fallback mode.
+ */
+function setupBesPanel(atsName: string, watchSubmit: boolean): void {
+  besPanel = createBesPanel(atsName);
   document.body.appendChild(besPanel);
 
-  // Close button
   besPanel.querySelector('#horus-close')?.addEventListener('click', () => {
     besPanel?.remove();
     besPanel = null;
   });
 
-  // Ask background for Ra status + active profile
   chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (status) => {
     if (!status?.raConnected) {
       updateBesPanel(null, null);
       return;
     }
 
-    // Load profile + default variant from storage (set by popup)
     chrome.storage.local.get(['activeProfileId', 'activeVariantId'], async (stored) => {
       const { activeProfileId, activeVariantId } = stored;
       if (!activeProfileId) {
@@ -846,14 +967,40 @@ async function init(): Promise<void> {
           null;
 
         updateBesPanel(profile, variant);
-        if (profile) {
-          watchForSubmission(ats.name, profile.id, variant?.id ?? null);
+        if (watchSubmit && profile) {
+          watchForSubmission(atsName, profile.id, variant?.id ?? null);
         }
       } catch {
         updateBesPanel(null, null);
       }
     });
   });
+}
+
+async function init(): Promise<void> {
+  // Guard against double-injection (manifest + programmatic)
+  if (document.getElementById('horus-bes-panel')) return;
+
+  const ats = detectAts(window.location.href);
+  if (!ats) return;
+
+  currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
+  adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
+  savedMappings = await loadMappings();
+
+  setupBesPanel(ats.name, /* watchSubmit */ true);
+}
+
+/** Generic fallback: activate Horus on any page without ATS detection. */
+async function initGeneric(): Promise<void> {
+  if (document.getElementById('horus-bes-panel')) return;
+
+  // No platform adapter — maximally inclusive field scanning
+  currentAdapter = null;
+  adapterExtraPatterns = [];
+  savedMappings = await loadMappings();
+
+  setupBesPanel('Generic', /* watchSubmit */ false);
 }
 
 // Wait for document body before injecting
@@ -869,5 +1016,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     const { profile, variant } = msg;
     fillAll(profile, variant).then((n) => reply({ filled: n }));
     return true; // keep message channel open for async reply
+  }
+
+  if (msg.type === 'INIT_GENERIC') {
+    initGeneric().then(() => reply({ ok: true }));
+    return true;
   }
 });

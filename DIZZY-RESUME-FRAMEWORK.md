@@ -257,9 +257,9 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - ✅ ADP Workforce adapter — skips suffix, preferred name, phone type, age/auth/sponsorship, former-employee, pay/shift/work-type preferences, EEO, source fields; "Next"/"Save & Continue" ≠ "Submit"
 - iCIMS adapter (iframes, legacy DOM)
 - Taleo adapter (session management, complex navigation)
-- Generic fallback adapter for unknown ATS platforms
-- User-assisted field mapping: 'What should this field map to?'
-- Save and share custom field mappings
+- ✅ Generic fallback — "Try on this page" popup button injects Horus on any site via `chrome.scripting`; runs without ATS detection gate
+- ✅ User-assisted field mapping — after Fill All, unclassified fields appear in the Bes panel with a category dropdown and "Map" button; immediately fills and saves the mapping
+- ✅ Mapping persistence — stored in `chrome.storage.local` keyed by `hostname:label`; applied automatically on every subsequent fill via `classifyField()`
 - File upload automation for resume/cover letter PDFs (requires PDF storage in Ra)
 
 ### Phase 4 — Tracker & Polish

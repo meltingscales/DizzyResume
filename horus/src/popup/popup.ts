@@ -9,6 +9,7 @@ import { detectAts, SUPPORTED_PLATFORMS } from '../ats/detect';
 const raDot = document.getElementById('ra-dot')!;
 const raStatus = document.getElementById('ra-status')!;
 const atsInfo = document.getElementById('ats-info')!;
+const tryBtn = document.getElementById('try-btn') as HTMLButtonElement;
 const profileSelect = document.getElementById('profile-select') as HTMLSelectElement;
 const variantSelect = document.getElementById('variant-select') as HTMLSelectElement;
 const fillBtn = document.getElementById('fill-btn') as HTMLButtonElement;
@@ -98,11 +99,13 @@ async function detectCurrentAts(): Promise<void> {
     atsInfo.className = '';
     atsInfo.innerHTML = `<span class="ats-badge">${ats.name}</span> <span style="color:#666;font-size:11px;">${ats.difficulty}</span>`;
     setAtsHelpVisibility(true);
+    tryBtn.style.display = 'none';
   } else {
     currentAts = null;
     atsInfo.className = 'no-ats';
     atsInfo.textContent = 'Not a recognised ATS page';
     setAtsHelpVisibility(false);
+    tryBtn.style.display = 'block';
   }
 }
 
@@ -194,6 +197,38 @@ for (const platform of SUPPORTED_PLATFORMS) {
   `;
   supportList.appendChild(item);
 }
+
+// ── Generic fallback injection ────────────────────────────────────────────────
+
+tryBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+
+  const originalText = tryBtn.textContent!;
+  tryBtn.textContent = 'Injecting…';
+  tryBtn.disabled = true;
+
+  try {
+    // Inject the content script (no-op if already running — init() guards with DOM check)
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content.js'],
+    });
+    // Small delay then send the generic-mode signal
+    await new Promise((r) => setTimeout(r, 150));
+    chrome.tabs.sendMessage(tab.id, { type: 'INIT_GENERIC' }, () => {
+      void chrome.runtime.lastError; // suppress "no receiver" if already active
+    });
+    tryBtn.textContent = 'Active ✓';
+    setTimeout(() => window.close(), 600);
+  } catch {
+    tryBtn.textContent = 'Failed — check page permissions';
+    tryBtn.disabled = false;
+    setTimeout(() => {
+      tryBtn.textContent = originalText;
+    }, 3000);
+  }
+});
 
 atsHelpBtn.addEventListener('click', () => {
   const isOpen = supportPanel.classList.toggle('open');

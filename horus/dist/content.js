@@ -57,6 +57,19 @@
     }
     return null;
   }
+  const STORAGE_KEY = "field_mappings";
+  function mappingKey(hostname, label) {
+    return `${hostname}:${label.trim().toLowerCase()}`;
+  }
+  async function loadMappings() {
+    const result = await chrome.storage.local.get(STORAGE_KEY);
+    return result[STORAGE_KEY] ?? {};
+  }
+  async function saveMapping(hostname, label, category) {
+    const existing = await loadMappings();
+    existing[mappingKey(hostname, label)] = category;
+    await chrome.storage.local.set({ [STORAGE_KEY]: existing });
+  }
   const SKIP_LABEL$1 = new RegExp(
     [
       "phone\\s*(device\\s*)?type",
@@ -235,6 +248,7 @@
   };
   let currentAdapter = null;
   let adapterExtraPatterns = [];
+  let savedMappings = {};
   const FIELD_PATTERNS = [
     {
       category: "first_name",
@@ -334,6 +348,10 @@
         if (pattern.test(name) || pattern.test(id)) return { category, confidence: "medium" };
       }
     }
+    const mk = `${window.location.hostname}:${label.trim()}`;
+    if (savedMappings[mk]) {
+      return { category: savedMappings[mk], confidence: "high" };
+    }
     if (el instanceof HTMLInputElement) {
       if (el.type === "email") return { category: "email", confidence: "medium" };
       if (el.type === "tel") return { category: "phone", confidence: "medium" };
@@ -358,6 +376,18 @@
       const { category, confidence } = classifyField(el);
       return { element: el, label: getFieldLabel(el), category, confidence };
     }).filter((f) => f.category !== "unknown");
+  }
+  function scanUnknownFields() {
+    const selectors = [
+      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="checkbox"]):not([type="radio"])',
+      "textarea",
+      "select"
+    ].join(", ");
+    return Array.from(document.querySelectorAll(selectors)).filter((el) => el.offsetParent !== null).map((el) => ({ element: el, label: getFieldLabel(el) })).filter(({ element, label }) => {
+      if (!label.trim()) return false;
+      if (currentAdapter?.shouldSkip?.(element, label)) return false;
+      return classifyField(element).category === "unknown";
+    });
   }
   function profileValueFor(category, profile, variant) {
     switch (category) {
@@ -572,6 +602,72 @@
     }
     return filled;
   }
+  const CATEGORY_OPTIONS = [
+    ["first_name", "First Name"],
+    ["last_name", "Last Name"],
+    ["full_name", "Full Name"],
+    ["email", "Email"],
+    ["phone", "Phone"],
+    ["address_line1", "Address Line 1"],
+    ["address_line2", "Address Line 2"],
+    ["city", "City"],
+    ["state", "State / Province"],
+    ["zip", "ZIP / Postal Code"],
+    ["country", "Country"],
+    ["linkedin", "LinkedIn URL"],
+    ["website", "Website / Portfolio"],
+    ["cover_letter", "Cover Letter"],
+    ["resume_text", "Resume Text"]
+  ];
+  function showUnknownFields(profile, variant) {
+    if (!besPanel) return;
+    const container = besPanel.querySelector("#horus-unknown-fields");
+    const list = besPanel.querySelector("#horus-unknown-list");
+    if (!container || !list) return;
+    const unknowns = scanUnknownFields();
+    if (unknowns.length === 0) {
+      container.style.display = "none";
+      return;
+    }
+    container.style.display = "block";
+    list.innerHTML = "";
+    for (const { element, label } of unknowns) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:4px;margin-bottom:5px;";
+      const labelEl = document.createElement("div");
+      labelEl.style.cssText = "flex:1;min-width:0;font-size:10px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+      labelEl.title = label;
+      labelEl.textContent = label;
+      const sel = document.createElement("select");
+      sel.style.cssText = "font-size:10px;padding:2px 4px;background:#0d0d1a;border:1px solid #333;color:#fff;border-radius:4px;max-width:110px;cursor:pointer;";
+      const placeholder = new Option("— map to —", "");
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      sel.appendChild(placeholder);
+      for (const [val, text] of CATEGORY_OPTIONS) {
+        sel.appendChild(new Option(text, val));
+      }
+      const mapBtn = document.createElement("button");
+      mapBtn.textContent = "Map";
+      mapBtn.style.cssText = "font-size:10px;padding:2px 7px;background:#f5a623;color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;";
+      mapBtn.addEventListener("click", async () => {
+        const category = sel.value;
+        if (!category) return;
+        await saveMapping(window.location.hostname, label, category);
+        savedMappings[mappingKey(window.location.hostname, label)] = category;
+        const value = profileValueFor(category, profile, variant);
+        if (value) {
+          await fillField({ element, category }, value);
+        }
+        row.remove();
+        if (list.children.length === 0) container.style.display = "none";
+      });
+      row.appendChild(labelEl);
+      row.appendChild(sel);
+      row.appendChild(mapBtn);
+      list.appendChild(row);
+    }
+  }
   let besPanel = null;
   function createBesPanel(ats) {
     const panel = document.createElement("div");
@@ -615,6 +711,10 @@
       border-radius:6px;cursor:pointer;font-size:12px;
     ">Choose Snippet</button>
     <div id="horus-filled-count" style="text-align:center;font-size:11px;color:#888;margin-top:6px;"></div>
+    <div id="horus-unknown-fields" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
+      <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Unmapped Fields</div>
+      <div id="horus-unknown-list"></div>
+    </div>
   `;
     let dragging = false, startY = 0, startTop = 0;
     panel.addEventListener("mousedown", (e) => {
@@ -740,6 +840,7 @@
       if (fillBtn) fillBtn.disabled = false;
       if (countEl) countEl.textContent = `${n} field${n !== 1 ? "s" : ""} filled`;
       if (undoBtn) undoBtn.style.color = "#fff";
+      showUnknownFields(profile, variant ?? void 0);
     });
     snippetBtn?.addEventListener("click", () => {
       openSnippetModal();
@@ -920,12 +1021,8 @@
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }
-  async function init() {
-    const ats = detectAts(window.location.href);
-    if (!ats) return;
-    currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
-    adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
-    besPanel = createBesPanel(ats.name);
+  function setupBesPanel(atsName, watchSubmit) {
+    besPanel = createBesPanel(atsName);
     document.body.appendChild(besPanel);
     besPanel.querySelector("#horus-close")?.addEventListener("click", () => {
       besPanel?.remove();
@@ -954,14 +1051,38 @@
           const profile = profiles.find((p) => p.id === activeProfileId) ?? null;
           const variant = variants.find((v) => v.id === activeVariantId) ?? variants.find((v) => v.is_default) ?? variants[0] ?? null;
           updateBesPanel(profile, variant);
-          if (profile) {
-            watchForSubmission(ats.name, profile.id, variant?.id ?? null);
+          if (watchSubmit && profile) {
+            watchForSubmission(atsName, profile.id, variant?.id ?? null);
           }
         } catch {
           updateBesPanel(null, null);
         }
       });
     });
+  }
+  async function init() {
+    if (document.getElementById("horus-bes-panel")) return;
+    const ats = detectAts(window.location.href);
+    if (!ats) return;
+    currentAdapter = ATS_ADAPTERS[ats.id] ?? null;
+    adapterExtraPatterns = currentAdapter?.extraPatterns ?? [];
+    savedMappings = await loadMappings();
+    setupBesPanel(
+      ats.name,
+      /* watchSubmit */
+      true
+    );
+  }
+  async function initGeneric() {
+    if (document.getElementById("horus-bes-panel")) return;
+    currentAdapter = null;
+    adapterExtraPatterns = [];
+    savedMappings = await loadMappings();
+    setupBesPanel(
+      "Generic",
+      /* watchSubmit */
+      false
+    );
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
@@ -972,6 +1093,10 @@
     if (msg.type === "FILL_FIELDS") {
       const { profile, variant } = msg;
       fillAll(profile, variant).then((n) => reply({ filled: n }));
+      return true;
+    }
+    if (msg.type === "INIT_GENERIC") {
+      initGeneric().then(() => reply({ ok: true }));
       return true;
     }
   });

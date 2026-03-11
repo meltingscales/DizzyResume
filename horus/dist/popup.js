@@ -2,6 +2,7 @@ import { S as SUPPORTED_PLATFORMS, r as raApi, d as detectAts } from "./assets/a
 const raDot = document.getElementById("ra-dot");
 const raStatus = document.getElementById("ra-status");
 const atsInfo = document.getElementById("ats-info");
+const tryBtn = document.getElementById("try-btn");
 const profileSelect = document.getElementById("profile-select");
 const variantSelect = document.getElementById("variant-select");
 const fillBtn = document.getElementById("fill-btn");
@@ -65,11 +66,13 @@ async function detectCurrentAts() {
     atsInfo.className = "";
     atsInfo.innerHTML = `<span class="ats-badge">${ats.name}</span> <span style="color:#666;font-size:11px;">${ats.difficulty}</span>`;
     setAtsHelpVisibility(true);
+    tryBtn.style.display = "none";
   } else {
     currentAts = null;
     atsInfo.className = "no-ats";
     atsInfo.textContent = "Not a recognised ATS page";
     setAtsHelpVisibility(false);
+    tryBtn.style.display = "block";
   }
 }
 function updateFillButton() {
@@ -142,6 +145,31 @@ for (const platform of SUPPORTED_PLATFORMS) {
   `;
   supportList.appendChild(item);
 }
+tryBtn.addEventListener("click", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+  const originalText = tryBtn.textContent;
+  tryBtn.textContent = "Injecting…";
+  tryBtn.disabled = true;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"]
+    });
+    await new Promise((r) => setTimeout(r, 150));
+    chrome.tabs.sendMessage(tab.id, { type: "INIT_GENERIC" }, () => {
+      void chrome.runtime.lastError;
+    });
+    tryBtn.textContent = "Active ✓";
+    setTimeout(() => window.close(), 600);
+  } catch {
+    tryBtn.textContent = "Failed — check page permissions";
+    tryBtn.disabled = false;
+    setTimeout(() => {
+      tryBtn.textContent = originalText;
+    }, 3e3);
+  }
+});
 atsHelpBtn.addEventListener("click", () => {
   const isOpen = supportPanel.classList.toggle("open");
   atsHelpBtn.style.color = isOpen ? "#f5a623" : "";
