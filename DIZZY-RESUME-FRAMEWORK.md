@@ -282,7 +282,7 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - Duplicate job detection
 - Multi-user testing with the full group of 3-5 people
 - Bug fixes from real-world usage across different industries
-- SmartRecruiters, Paylocity, Jobvite, JazzHR adapters
+- ✅ SmartRecruiters, Paylocity, Jobvite, JazzHR, Ashby adapters
 - Documentation and onboarding guide for new users
 
 ---

@@ -7,20 +7,30 @@ import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } fr
 import { detectAts } from './ats/detect';
 import { loadMappings, saveMapping, mappingKey, type MappingStore } from './mappings';
 import type { AtsAdapter } from './ats/adapter';
-import { workdayAdapter }   from './ats/workday';
-import { greenhouseAdapter } from './ats/greenhouse';
-import { bamboohrAdapter }   from './ats/bamboohr';
-import { leverAdapter }      from './ats/lever';
-import { adpAdapter }        from './ats/adp';
+import { workdayAdapter }          from './ats/workday';
+import { greenhouseAdapter }        from './ats/greenhouse';
+import { bamboohrAdapter }          from './ats/bamboohr';
+import { leverAdapter }             from './ats/lever';
+import { adpAdapter }               from './ats/adp';
+import { smartrecruitersAdapter }   from './ats/smartrecruiters';
+import { paylocityAdapter }         from './ats/paylocity';
+import { jobviteAdapter }           from './ats/jobvite';
+import { jazzhrAdapter }            from './ats/jazzhr';
+import { ashbyAdapter }             from './ats/ashby';
 
 // ── Adapter registry ──────────────────────────────────────────────────────────
 
 const ATS_ADAPTERS: Record<string, AtsAdapter> = {
-  workday:    workdayAdapter,
-  greenhouse: greenhouseAdapter,
-  bamboohr:   bamboohrAdapter,
-  lever:      leverAdapter,
-  adp:        adpAdapter,
+  workday:          workdayAdapter,
+  greenhouse:       greenhouseAdapter,
+  bamboohr:         bamboohrAdapter,
+  lever:            leverAdapter,
+  adp:              adpAdapter,
+  smartrecruiters:  smartrecruitersAdapter,
+  paylocity:        paylocityAdapter,
+  jobvite:          jobviteAdapter,
+  jazzhr:           jazzhrAdapter,
+  ashby:            ashbyAdapter,
 };
 
 /** Active adapter for the current ATS page. Set in init(). */
