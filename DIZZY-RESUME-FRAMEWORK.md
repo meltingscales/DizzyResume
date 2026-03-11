@@ -260,18 +260,19 @@ Priority targets based on market share and likelihood of encountering them. Henr
 - Generic fallback adapter for unknown ATS platforms
 - User-assisted field mapping: 'What should this field map to?'
 - Save and share custom field mappings
+- File upload automation for resume/cover letter PDFs (requires PDF storage in Ra)
 
 ### Phase 4 — Tracker & Polish
 *Time: 2-3 weeks*
 
-- Application auto-logging on successful form submission
-- Kanban tracker dashboard in Tauri app
-- CSV/XLSX export
-- Daily goals and statistics
-- Cover letter assembler with merge fields
-- Credential vault with encryption
-- Quick-copy floating panel
-- Review/undo highlighting after autofill
+- ✅ Application auto-logging on successful form submission — Seshat log modal in Horus
+- ✅ Kanban tracker dashboard in Ra — drag-and-drop, age badges, status dropdown
+- ✅ CSV export — one-click export from TrackerView
+- ✅ Cover letter assembler with merge fields — Thoth's Scriptorium (TemplateAssembleModal)
+- ✅ Quick-copy floating panel — Bes panel in Horus with snippet picker
+- ✅ Review/undo highlighting after autofill — golden outline + Undo Fill button
+- Daily goals and statistics dashboard
+- Credential vault with encryption (Serket's Vault)
 
 ### Phase 5 — Discovery & Scale
 *Time: 2-3 weeks*
