@@ -253,7 +253,7 @@ Priority targets based on market share and likelihood of encountering them. Henr
 ### Phase 3 — Hard Mode
 *Time: 3-4 weeks*
 
-- Workday adapter (React controlled inputs, multi-step forms)
+- ✅ Workday adapter — skips device type, dialing code, auth/sponsorship, EEO, source fields; precise step-nav vs final-submit detection ("Save and Continue" ≠ "Apply")
 - iCIMS adapter (iframes, legacy DOM)
 - Taleo adapter (session management, complex navigation)
 - ADP Workforce adapter

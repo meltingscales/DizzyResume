@@ -6,13 +6,15 @@
 import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
 import { detectAts } from './ats/detect';
 import type { AtsAdapter } from './ats/adapter';
+import { workdayAdapter }   from './ats/workday';
 import { greenhouseAdapter } from './ats/greenhouse';
-import { bamboohrAdapter } from './ats/bamboohr';
-import { leverAdapter } from './ats/lever';
+import { bamboohrAdapter }   from './ats/bamboohr';
+import { leverAdapter }      from './ats/lever';
 
 // ── Adapter registry ──────────────────────────────────────────────────────────
 
 const ATS_ADAPTERS: Record<string, AtsAdapter> = {
+  workday:    workdayAdapter,
   greenhouse: greenhouseAdapter,
   bamboohr:   bamboohrAdapter,
   lever:      leverAdapter,

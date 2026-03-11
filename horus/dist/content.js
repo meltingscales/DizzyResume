@@ -57,6 +57,50 @@
     }
     return null;
   }
+  const SKIP_LABEL = new RegExp(
+    [
+      "phone\\s*(device\\s*)?type",
+      // "Phone Device Type" dropdown
+      "country\\s*(phone|dialing)\\s*code",
+      // phone country prefix select
+      "dialing\\s*code",
+      "legally\\s*authorized",
+      // "Are you legally authorized to work…"
+      "require\\s*sponsorship",
+      // "Will you require visa sponsorship…"
+      "will\\s+you\\s+now\\s+or",
+      // "Will you now or in the future…"
+      "visa\\s*sponsorship",
+      "pronouns?",
+      // "Preferred Pronoun"
+      "\\bgender\\b",
+      "ethnicity",
+      "\\brace\\b",
+      "veteran",
+      "disability",
+      "individual\\s+with\\s+a\\s+disability",
+      "self.?identif",
+      "how\\s+(did|do)\\s+you\\s+(hear|find|know|learn)",
+      // "How did you hear…"
+      "source\\s+of\\s+hire",
+      "referral\\s+source"
+    ].join("|"),
+    "i"
+  );
+  const STEP_NAV = /save\s+and\s+continue|next\s+step|\bnext\b|\bback\b|previous|cancel|save\s+for\s+later/i;
+  const FINAL_SUBMIT = /\bapply\b|^submit$|apply\s+now|review\s+application|complete\s+application|submit\s+application|finish\s+application/i;
+  const workdayAdapter = {
+    id: "workday",
+    shouldSkip(_el, label) {
+      return SKIP_LABEL.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
+      if (STEP_NAV.test(text)) return false;
+      if (FINAL_SUBMIT.test(text)) return true;
+      return false;
+    }
+  };
   const EEO_PATTERN = /race|ethnicity|gender|veteran|disability|self.?identif|demographic|pronouns/i;
   const greenhouseAdapter = {
     id: "greenhouse",
@@ -116,6 +160,7 @@
     }
   };
   const ATS_ADAPTERS = {
+    workday: workdayAdapter,
     greenhouse: greenhouseAdapter,
     bamboohr: bamboohrAdapter,
     lever: leverAdapter
