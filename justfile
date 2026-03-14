@@ -2,6 +2,8 @@
 # Requires: just (https://github.com/casey/just)
 #           pnpm >= 9.0.0
 
+set windows-shell := ["cmd.exe", "/c"]
+
 # Show available recipes
 default:
     @just --list
