@@ -31,6 +31,16 @@ export function ProfilesView() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDelete = async (id: string) => {
+    await api.profiles.delete(id);
+    setProfiles((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      loadStats(next);
+      return next;
+    });
+    refreshProfiles().catch(console.error);
+  };
+
   const handleSave = (saved: Profile) => {
     setProfiles((prev) => {
       const exists = prev.find((p) => p.id === saved.id);
@@ -98,6 +108,7 @@ export function ProfilesView() {
               key={profile.id}
               profile={profile}
               onEdit={() => setModal({ open: true, profile })}
+              onDelete={() => handleDelete(profile.id)}
             />
           ))}
           <button
