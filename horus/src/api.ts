@@ -7,6 +7,7 @@ import type {
   Template,
   Application,
   CreateApplicationInput,
+  ExperienceEntry,
 } from './types';
 
 const BASE = 'http://127.0.0.1:9741';
@@ -56,6 +57,8 @@ export const raApi = {
     get: (id: string) => get<Profile>(`/profiles/${id}`),
     variants: (profileId: string) =>
       get<ResumeVariant[]>(`/profiles/${profileId}/variants`),
+    experience: (profileId: string) =>
+      get<ExperienceEntry[]>(`/profiles/${profileId}/experience`),
   },
 
   snippets: {

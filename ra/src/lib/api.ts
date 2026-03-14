@@ -20,6 +20,9 @@ import type {
   UpdateCredentialInput,
   ResumeFile,
   ImportResumeFileInput,
+  ExperienceEntry,
+  CreateExperienceEntryInput,
+  UpdateExperienceEntryInput,
 } from '../types';
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
@@ -97,6 +100,16 @@ export const api = {
     import: (input: ImportResumeFileInput) =>
       invoke<ResumeFile>('import_resume_file', { input }),
     delete: (id: string) => invoke<void>('delete_resume_file', { id }),
+  },
+
+  experience: {
+    list: (profileId: string) =>
+      invoke<ExperienceEntry[]>('get_experience_entries', { profileId }),
+    create: (input: CreateExperienceEntryInput) =>
+      invoke<ExperienceEntry>('create_experience_entry', { input }),
+    update: (id: string, input: UpdateExperienceEntryInput) =>
+      invoke<ExperienceEntry>('update_experience_entry', { id, input }),
+    delete: (id: string) => invoke<void>('delete_experience_entry', { id }),
   },
 
   vault: {

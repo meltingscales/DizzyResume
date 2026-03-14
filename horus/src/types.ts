@@ -85,6 +85,25 @@ export interface CreateApplicationInput {
   applied_at: string | null;
 }
 
+// ── Experience Entry ──────────────────────────────────────────────────────────
+
+export interface ExperienceEntry {
+  id: string;
+  profile_id: string;
+  company: string;
+  title: string;
+  location: string;
+  /** YYYY-MM */
+  start_date: string;
+  /** YYYY-MM, null if is_current */
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // Extension-internal types
 
 export interface HorusState {
@@ -116,4 +135,11 @@ export type FieldCategory =
   | 'website'
   | 'cover_letter'
   | 'resume_text'
+  // Work experience — index encoded in element id (workExperience-{n}--{field})
+  | 'work_exp_title'
+  | 'work_exp_company'
+  | 'work_exp_location'
+  | 'work_exp_start_date'
+  | 'work_exp_end_date'
+  | 'work_exp_description'
   | 'unknown';

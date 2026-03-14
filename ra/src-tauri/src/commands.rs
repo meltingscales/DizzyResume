@@ -1104,3 +1104,133 @@ pub fn delete_credential(db: State<'_, Database>, id: String) -> Result<(), AppE
     }
     Ok(())
 }
+
+// ── Experience Entries ────────────────────────────────────────────────────────
+
+fn row_to_experience(row: &rusqlite::Row<'_>) -> rusqlite::Result<ExperienceEntry> {
+    let is_current: i64 = row.get("is_current")?;
+    Ok(ExperienceEntry {
+        id: row.get("id")?,
+        profile_id: row.get("profile_id")?,
+        company: row.get("company")?,
+        title: row.get("title")?,
+        location: row.get("location")?,
+        start_date: row.get("start_date")?,
+        end_date: row.get("end_date")?,
+        is_current: is_current != 0,
+        description: row.get("description")?,
+        sort_order: row.get("sort_order")?,
+        created_at: row.get("created_at")?,
+        updated_at: row.get("updated_at")?,
+    })
+}
+
+#[tauri::command]
+pub fn get_experience_entries(
+    db: State<'_, Database>,
+    profile_id: String,
+) -> Result<Vec<ExperienceEntry>, AppError> {
+    let conn = db.0.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, profile_id, company, title, location, start_date, end_date,
+                is_current, description, sort_order, created_at, updated_at
+         FROM experience_entries WHERE profile_id=?1 ORDER BY sort_order ASC",
+    )?;
+    let entries = stmt
+        .query_map([&profile_id], row_to_experience)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(entries)
+}
+
+#[tauri::command]
+pub fn create_experience_entry(
+    db: State<'_, Database>,
+    input: CreateExperienceEntryInput,
+) -> Result<ExperienceEntry, AppError> {
+    let conn = db.0.lock().unwrap();
+    let id = new_id();
+    let now = now();
+    conn.execute(
+        "INSERT INTO experience_entries
+         (id, profile_id, company, title, location, start_date, end_date,
+          is_current, description, sort_order, created_at, updated_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?11)",
+        rusqlite::params![
+            id, input.profile_id, input.company, input.title, input.location,
+            input.start_date, input.end_date,
+            input.is_current as i64, input.description, input.sort_order, now,
+        ],
+    )?;
+    Ok(ExperienceEntry {
+        id,
+        profile_id: input.profile_id,
+        company: input.company,
+        title: input.title,
+        location: input.location,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        is_current: input.is_current,
+        description: input.description,
+        sort_order: input.sort_order,
+        created_at: now.clone(),
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn update_experience_entry(
+    db: State<'_, Database>,
+    id: String,
+    input: UpdateExperienceEntryInput,
+) -> Result<ExperienceEntry, AppError> {
+    let conn = db.0.lock().unwrap();
+    let now = now();
+    let rows = conn.execute(
+        "UPDATE experience_entries SET company=?1, title=?2, location=?3,
+         start_date=?4, end_date=?5, is_current=?6, description=?7,
+         sort_order=?8, updated_at=?9 WHERE id=?10",
+        rusqlite::params![
+            input.company, input.title, input.location,
+            input.start_date, input.end_date,
+            input.is_current as i64, input.description,
+            input.sort_order, now, id,
+        ],
+    )?;
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("experience entry {id}")));
+    }
+    let profile_id: String = conn.query_row(
+        "SELECT profile_id FROM experience_entries WHERE id=?1",
+        [&id],
+        |r| r.get(0),
+    )?;
+    let created_at: String = conn.query_row(
+        "SELECT created_at FROM experience_entries WHERE id=?1",
+        [&id],
+        |r| r.get(0),
+    )?;
+    Ok(ExperienceEntry {
+        id,
+        profile_id,
+        company: input.company,
+        title: input.title,
+        location: input.location,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        is_current: input.is_current,
+        description: input.description,
+        sort_order: input.sort_order,
+        created_at,
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn delete_experience_entry(db: State<'_, Database>, id: String) -> Result<(), AppError> {
+    let conn = db.0.lock().unwrap();
+    let rows = conn.execute("DELETE FROM experience_entries WHERE id=?1", [&id])?;
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("experience entry {id}")));
+    }
+    Ok(())
+}

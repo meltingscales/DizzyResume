@@ -186,6 +186,48 @@ export interface CreateApplicationInput {
   applied_at: string | null;
 }
 
+// ── Experience Entries ────────────────────────────────────────────────────────
+
+export interface ExperienceEntry {
+  id: string;
+  profile_id: string;
+  company: string;
+  title: string;
+  location: string;
+  /** YYYY-MM */
+  start_date: string;
+  /** YYYY-MM, null if is_current */
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateExperienceEntryInput {
+  profile_id: string;
+  company: string;
+  title: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+  sort_order: number;
+}
+
+export interface UpdateExperienceEntryInput {
+  company: string;
+  title: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+  sort_order: number;
+}
+
 // ── Credential (Serket's Vault) ───────────────────────────────────────────────
 
 export interface Credential {

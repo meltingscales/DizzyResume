@@ -3,7 +3,7 @@
 /// Ma'at's Judgment: scans form fields, classifies them, fills them with
 /// profile data. Bes's Panel: injects the floating quick-fill sidebar.
 
-import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory } from './types';
+import type { Profile, ResumeVariant, Snippet, DetectedField, FieldCategory, ExperienceEntry } from './types';
 import { detectAts } from './ats/detect';
 import { loadMappings, saveMapping, mappingKey, type MappingStore } from './mappings';
 import { fetchProfileFiles, attachFileToInput } from './files';
@@ -36,6 +36,9 @@ const ATS_ADAPTERS: Record<string, AtsAdapter> = {
 
 /** Active adapter for the current ATS page. Set in init(). */
 let currentAdapter: AtsAdapter | null = null;
+
+/** Work experience entries for the active profile, ordered by sort_order ASC. */
+let experiences: ExperienceEntry[] = [];
 
 /** Extra patterns contributed by the active adapter. Merged into classifyField. */
 let adapterExtraPatterns: Array<{ category: FieldCategory; patterns: RegExp[] }> = [];
@@ -145,6 +148,21 @@ function classifyField(el: HTMLElement): {
     return { category: 'unknown', confidence: 'low' };
   }
 
+  // Workday work experience repeating fields: workExperience-{n}--{field}
+  const workExpMatch = /^workexperience-\d+--(\w+)$/i.exec(id);
+  if (workExpMatch) {
+    switch (workExpMatch[1].toLowerCase()) {
+      case 'jobtitle':    return { category: 'work_exp_title',       confidence: 'high' };
+      case 'company':
+      case 'employer':    return { category: 'work_exp_company',     confidence: 'high' };
+      case 'location':    return { category: 'work_exp_location',    confidence: 'high' };
+      case 'startdate':   return { category: 'work_exp_start_date',  confidence: 'high' };
+      case 'enddate':     return { category: 'work_exp_end_date',    confidence: 'high' };
+      case 'jobdescription':
+      case 'description': return { category: 'work_exp_description', confidence: 'high' };
+    }
+  }
+
   for (const { category, patterns } of FIELD_PATTERNS) {
     for (const pattern of patterns) {
       if (pattern.test(label)) return { category, confidence: 'high' };
@@ -239,6 +257,39 @@ function profileValueFor(category: FieldCategory, profile: Profile, variant?: Re
     case 'resume_text': return variant?.content ?? '';
     case 'cover_letter': return ''; // Thoth will handle this later
     default: return '';
+  }
+}
+
+/** Format YYYY-MM (or YYYY-MM-DD) → MM/YYYY for ATS date fields. */
+function formatMonthYear(dateStr: string): string {
+  const parts = dateStr.split('-');
+  if (parts.length >= 2) return `${parts[1].padStart(2, '0')}/${parts[0]}`;
+  return dateStr;
+}
+
+/**
+ * Resolve a value for a work_exp_* category field.
+ * Extracts the entry index from the element's id (workExperience-{n}--{field})
+ * and looks up the corresponding entry in the sorted experiences array.
+ */
+function workExpValueFor(el: HTMLElement, exps: ExperienceEntry[]): string {
+  const match = /^workExperience-(\d+)--(\w+)$/i.exec(el.id);
+  if (!match) return '';
+  const idx = parseInt(match[1], 10);
+  const field = match[2].toLowerCase();
+  const entry = exps[idx];
+  if (!entry) return '';
+
+  switch (field) {
+    case 'jobtitle':      return entry.title;
+    case 'company':
+    case 'employer':      return entry.company;
+    case 'location':      return entry.location;
+    case 'startdate':     return formatMonthYear(entry.start_date);
+    case 'enddate':       return entry.is_current ? '' : formatMonthYear(entry.end_date ?? '');
+    case 'jobdescription':
+    case 'description':   return entry.description;
+    default:              return '';
   }
 }
 
@@ -392,7 +443,9 @@ async function fillAll(profile: Profile, variant?: ResumeVariant): Promise<numbe
   for (const field of fields) {
     // Let the adapter veto fields it wants to skip (e.g. EEO demographics)
     if (currentAdapter?.shouldSkip?.(field.element, field.label)) continue;
-    const value = profileValueFor(field.category, profile, variant);
+    const value = field.category.startsWith('work_exp_')
+      ? workExpValueFor(field.element, experiences)
+      : profileValueFor(field.category, profile, variant);
     if (value && await fillField(field, value)) {
       filled++;
     }
@@ -1084,12 +1137,16 @@ function setupBesPanel(atsName: string, watchSubmit: boolean): void {
       }
 
       try {
-        const [profiles, variants] = await Promise.all([
+        const [profiles, variants, exps] = await Promise.all([
           fetch(`http://127.0.0.1:9741/profiles`).then((r) => r.json()) as Promise<Profile[]>,
           fetch(`http://127.0.0.1:9741/profiles/${activeProfileId}/variants`).then((r) =>
             r.json()
           ) as Promise<ResumeVariant[]>,
+          fetch(`http://127.0.0.1:9741/profiles/${activeProfileId}/experience`).then((r) =>
+            r.json()
+          ).catch(() => []) as Promise<ExperienceEntry[]>,
         ]);
+        experiences = exps;
 
         const profile = profiles.find((p) => p.id === activeProfileId) ?? null;
         const variant =

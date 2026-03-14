@@ -103,6 +103,23 @@ CREATE TABLE IF NOT EXISTS vault_meta (
     check_blob  TEXT NOT NULL
 );
 
+-- Work experience entries for a profile (ordered by sort_order ASC = most recent first).
+CREATE TABLE IF NOT EXISTS experience_entries (
+    id          TEXT PRIMARY KEY,
+    profile_id  TEXT NOT NULL,
+    company     TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    location    TEXT NOT NULL DEFAULT '',
+    start_date  TEXT NOT NULL DEFAULT '',
+    end_date    TEXT,
+    is_current  INTEGER NOT NULL DEFAULT 0,
+    description TEXT NOT NULL DEFAULT '',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
 -- One encrypted credential per ATS account.
 CREATE TABLE IF NOT EXISTS credentials (
     id              TEXT PRIMARY KEY,

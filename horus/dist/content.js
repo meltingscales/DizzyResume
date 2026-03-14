@@ -70,6 +70,28 @@
     existing[mappingKey(hostname, label)] = category;
     await chrome.storage.local.set({ [STORAGE_KEY]: existing });
   }
+  const RA_BASE = "http://127.0.0.1:9741";
+  async function fetchProfileFiles(profileId) {
+    try {
+      const resp = await fetch(`${RA_BASE}/profiles/${profileId}/files`);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data ?? [];
+    } catch {
+      return [];
+    }
+  }
+  async function attachFileToInput(input, fileId, filename) {
+    const resp = await fetch(`${RA_BASE}/files/${fileId}/download`);
+    if (!resp.ok) throw new Error(`Ra returned ${resp.status} for file ${fileId}`);
+    const blob = await resp.blob();
+    const file = new File([blob], filename, { type: "application/pdf" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
   const SKIP_LABEL$1 = new RegExp(
     [
       "phone\\s*(device\\s*)?type",
@@ -100,8 +122,8 @@
     ].join("|"),
     "i"
   );
-  const STEP_NAV$1 = /save\s+and\s+continue|next\s+step|\bnext\b|\bback\b|previous|cancel|save\s+for\s+later/i;
-  const FINAL_SUBMIT$1 = /\bapply\b|^submit$|apply\s+now|review\s+application|complete\s+application|submit\s+application|finish\s+application/i;
+  const STEP_NAV$4 = /save\s+and\s+continue|next\s+step|\bnext\b|\bback\b|previous|cancel|save\s+for\s+later/i;
+  const FINAL_SUBMIT$4 = /\bapply\b|^submit$|apply\s+now|review\s+application|complete\s+application|submit\s+application|finish\s+application/i;
   const workdayAdapter = {
     id: "workday",
     shouldSkip(_el, label) {
@@ -109,8 +131,8 @@
     },
     isSubmitButton(el) {
       const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
-      if (STEP_NAV$1.test(text)) return false;
-      if (FINAL_SUBMIT$1.test(text)) return true;
+      if (STEP_NAV$4.test(text)) return false;
+      if (FINAL_SUBMIT$4.test(text)) return true;
       return false;
     }
   };
@@ -225,8 +247,8 @@
     ].join("|"),
     "i"
   );
-  const STEP_NAV = /\bnext\b|next\s+section|\bback\b|previous|save\s+&?\s*continue|save\s+and\s+continue|cancel/i;
-  const FINAL_SUBMIT = /^submit$|submit\s+application|finish\s+application/i;
+  const STEP_NAV$3 = /\bnext\b|next\s+section|\bback\b|previous|save\s+&?\s*continue|save\s+and\s+continue|cancel/i;
+  const FINAL_SUBMIT$3 = /^submit$|submit\s+application|finish\s+application/i;
   const adpAdapter = {
     id: "adp",
     shouldSkip(_el, label) {
@@ -234,9 +256,102 @@
     },
     isSubmitButton(el) {
       const text = el.textContent?.trim() ?? el.value?.trim() ?? "";
+      if (STEP_NAV$3.test(text)) return false;
+      if (FINAL_SUBMIT$3.test(text)) return true;
+      return false;
+    }
+  };
+  const SKIP_LABELS$4 = /how.*(hear|find|learn|know).*(us|role|job|position)|referral source|source of hire|where did you (hear|find|learn)|race|ethnicity|gender|sex\b|veteran|military|disability|pronouns|self.?identif/i;
+  const STEP_NAV$2 = /^\s*(next|back|previous|cancel|save( (and|&) continue)?)\s*$/i;
+  const FINAL_SUBMIT$2 = /submit\s+application|^apply$|apply\s+now|complete\s+application/i;
+  const smartrecruitersAdapter = {
+    id: "smartrecruiters",
+    extraPatterns: [
+      {
+        category: "linkedin",
+        patterns: [/linkedIn(Url)?/i]
+      },
+      {
+        category: "website",
+        patterns: [/portfolioUrl|personalWebsite|websiteUrl/i]
+      }
+    ],
+    shouldSkip(_el, label) {
+      return SKIP_LABELS$4.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      if (STEP_NAV$2.test(text)) return false;
+      if (FINAL_SUBMIT$2.test(text)) return true;
+      return false;
+    }
+  };
+  const SKIP_LABELS$3 = /how.*(hear|find|know|learn).*(us|role|job|position)|referral|source of hire|desired (salary|pay|compensation)|salary expectation|pay expectation|are you (legally )?authorized|work (authorization|permit)|require.*(sponsor|visa)|race|ethnicity|gender|sex\b|veteran|military|disability|self.?identif/i;
+  const STEP_NAV$1 = /^\s*(next|previous|back|cancel|save( (and|&) continue)?)\s*$/i;
+  const FINAL_SUBMIT$1 = /^submit$|apply\s+now|submit\s+application|complete\s+application/i;
+  const paylocityAdapter = {
+    id: "paylocity",
+    shouldSkip(_el, label) {
+      return SKIP_LABELS$3.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      if (STEP_NAV$1.test(text)) return false;
+      if (FINAL_SUBMIT$1.test(text)) return true;
+      return false;
+    }
+  };
+  const SKIP_LABELS$2 = /how.*(hear|find|learn|know).*(us|role|job|position)|referral|source\b|gender|sex\b|race|ethnicity|veteran|military|disability|self.?identif|work (authorization|permit)|require.*(sponsor|visa)|authorized to work/i;
+  const STEP_NAV = /^\s*(next(\s+step)?|back|previous|cancel)\s*$/i;
+  const FINAL_SUBMIT = /submit\s+application|^apply$|apply\s+now|complete\s+application/i;
+  const jobviteAdapter = {
+    id: "jobvite",
+    extraPatterns: [
+      {
+        category: "linkedin",
+        patterns: [/LinkedInUrl|LinkedIn\s+Profile|linkedin_url/i]
+      }
+    ],
+    shouldSkip(_el, label) {
+      return SKIP_LABELS$2.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
       if (STEP_NAV.test(text)) return false;
       if (FINAL_SUBMIT.test(text)) return true;
       return false;
+    }
+  };
+  const SKIP_LABELS$1 = /how.*(hear|find|learn|know).*(us|role|job|position)|referral|source\b|gender|sex\b|race|ethnicity|veteran|military|disability|self.?identif/i;
+  const jazzhrAdapter = {
+    id: "jazzhr",
+    shouldSkip(_el, label) {
+      return SKIP_LABELS$1.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      return /apply (for this job|now)|submit application|^apply$/i.test(text);
+    }
+  };
+  const SKIP_LABELS = /how.*(hear|find|learn|know).*(us|role|job|position)|referral|source\b|gender|sex\b|pronouns|race|ethnicity|veteran|military|disability|self.?identif/i;
+  const ashbyAdapter = {
+    id: "ashby",
+    extraPatterns: [
+      {
+        category: "linkedin",
+        patterns: [/^linkedin$/i, /linkedin[_\s-]?(url|profile|link)?/i]
+      },
+      {
+        category: "website",
+        patterns: [/^(personal[_\s-]?)?website$/i, /portfolio[_\s-]?(url|link)?/i, /github[_\s-]?(url|link)?/i]
+      }
+    ],
+    shouldSkip(_el, label) {
+      return SKIP_LABELS.test(label);
+    },
+    isSubmitButton(el) {
+      const text = el.textContent?.trim() ?? "";
+      return /submit\s+application|^apply$|apply\s+now/i.test(text);
     }
   };
   const ATS_ADAPTERS = {
@@ -244,9 +359,15 @@
     greenhouse: greenhouseAdapter,
     bamboohr: bamboohrAdapter,
     lever: leverAdapter,
-    adp: adpAdapter
+    adp: adpAdapter,
+    smartrecruiters: smartrecruitersAdapter,
+    paylocity: paylocityAdapter,
+    jobvite: jobviteAdapter,
+    jazzhr: jazzhrAdapter,
+    ashby: ashbyAdapter
   };
   let currentAdapter = null;
+  let experiences = [];
   let adapterExtraPatterns = [];
   let savedMappings = {};
   const FIELD_PATTERNS = [
@@ -336,6 +457,25 @@
     if (/middle.?name|middlename/i.test(name) || /middle.?name|middlename/i.test(id) || /middle.?name/i.test(label)) {
       return { category: "unknown", confidence: "low" };
     }
+    const workExpMatch = /^workexperience-\d+--(\w+)$/i.exec(id);
+    if (workExpMatch) {
+      switch (workExpMatch[1].toLowerCase()) {
+        case "jobtitle":
+          return { category: "work_exp_title", confidence: "high" };
+        case "company":
+        case "employer":
+          return { category: "work_exp_company", confidence: "high" };
+        case "location":
+          return { category: "work_exp_location", confidence: "high" };
+        case "startdate":
+          return { category: "work_exp_start_date", confidence: "high" };
+        case "enddate":
+          return { category: "work_exp_end_date", confidence: "high" };
+        case "jobdescription":
+        case "description":
+          return { category: "work_exp_description", confidence: "high" };
+      }
+    }
     for (const { category, patterns } of FIELD_PATTERNS) {
       for (const pattern of patterns) {
         if (pattern.test(label)) return { category, confidence: "high" };
@@ -422,6 +562,37 @@
       case "cover_letter":
         return "";
       // Thoth will handle this later
+      default:
+        return "";
+    }
+  }
+  function formatMonthYear(dateStr) {
+    const parts = dateStr.split("-");
+    if (parts.length >= 2) return `${parts[1].padStart(2, "0")}/${parts[0]}`;
+    return dateStr;
+  }
+  function workExpValueFor(el, exps) {
+    const match = /^workExperience-(\d+)--(\w+)$/i.exec(el.id);
+    if (!match) return "";
+    const idx = parseInt(match[1], 10);
+    const field = match[2].toLowerCase();
+    const entry = exps[idx];
+    if (!entry) return "";
+    switch (field) {
+      case "jobtitle":
+        return entry.title;
+      case "company":
+      case "employer":
+        return entry.company;
+      case "location":
+        return entry.location;
+      case "startdate":
+        return formatMonthYear(entry.start_date);
+      case "enddate":
+        return entry.is_current ? "" : formatMonthYear(entry.end_date ?? "");
+      case "jobdescription":
+      case "description":
+        return entry.description;
       default:
         return "";
     }
@@ -592,7 +763,7 @@
     let filled = 0;
     for (const field of fields) {
       if (currentAdapter?.shouldSkip?.(field.element, field.label)) continue;
-      const value = profileValueFor(field.category, profile, variant);
+      const value = field.category.startsWith("work_exp_") ? workExpValueFor(field.element, experiences) : profileValueFor(field.category, profile, variant);
       if (value && await fillField(field, value)) {
         filled++;
       }
@@ -668,6 +839,89 @@
       list.appendChild(row);
     }
   }
+  function scanFileInputs() {
+    return Array.from(document.querySelectorAll("input[type=file]")).filter(
+      (el) => {
+        if (el.offsetParent === null) return false;
+        if (currentAdapter?.id === "workday") return false;
+        const label = getFieldLabel(el).toLowerCase();
+        const accept = (el.getAttribute("accept") ?? "").toLowerCase();
+        return accept.includes("pdf") || accept === "" || accept === "*" || /resume|cv|curriculum|upload|attach|document/i.test(label);
+      }
+    );
+  }
+  async function showFileUploadSection(profile, variant) {
+    if (!besPanel) return;
+    const section = besPanel.querySelector("#horus-file-section");
+    const listEl = besPanel.querySelector("#horus-file-list");
+    if (!section || !listEl) return;
+    const inputs = scanFileInputs();
+    if (inputs.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+    const files = await fetchProfileFiles(profile.id);
+    section.style.display = "block";
+    listEl.innerHTML = "";
+    if (files.length === 0) {
+      listEl.innerHTML = '<div style="font-size:11px;color:#888;">No PDFs stored — import files in Ra.</div>';
+      return;
+    }
+    const resumes = files.filter((f) => f.kind === "resume");
+    const coverLetters = files.filter((f) => f.kind === "cover-letter");
+    const orderedFiles = [...resumes, ...coverLetters];
+    inputs.forEach((input, idx) => {
+      const inputLabel = getFieldLabel(input) || `File upload ${idx + 1}`;
+      const row = document.createElement("div");
+      row.style.cssText = "margin-bottom:8px;";
+      const labelEl = document.createElement("div");
+      labelEl.style.cssText = "font-size:10px;color:#aaa;margin-bottom:3px;";
+      labelEl.textContent = inputLabel;
+      row.appendChild(labelEl);
+      const select = document.createElement("select");
+      select.style.cssText = "width:100%;padding:4px 6px;background:#1a1a2e;color:#e8e8f0;border:1px solid #333;border-radius:4px;font-size:11px;margin-bottom:4px;";
+      orderedFiles.forEach((f) => {
+        const opt = new Option(
+          `${f.kind === "cover-letter" ? "📝 " : "📄 "}${f.label}`,
+          f.id
+        );
+        opt.dataset.filename = f.filename;
+        if (variant && f.variant_id === variant.id) select.value = f.id;
+        select.appendChild(opt);
+      });
+      if (!select.value && resumes.length > 0) select.value = resumes[0].id;
+      row.appendChild(select);
+      const attachBtn = document.createElement("button");
+      attachBtn.textContent = "Attach";
+      attachBtn.style.cssText = "padding:4px 10px;background:#f5a623;color:#000;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;";
+      const statusEl = document.createElement("span");
+      statusEl.style.cssText = "font-size:10px;color:#22c55e;margin-left:6px;";
+      attachBtn.addEventListener("click", async () => {
+        const selectedId = select.value;
+        const selectedOpt = select.querySelector(`option[value="${selectedId}"]`);
+        const filename = selectedOpt?.dataset.filename ?? "resume.pdf";
+        attachBtn.disabled = true;
+        attachBtn.textContent = "…";
+        try {
+          await attachFileToInput(input, selectedId, filename);
+          statusEl.textContent = "Attached ✓";
+          attachBtn.textContent = "Attach";
+        } catch {
+          statusEl.textContent = "Failed";
+          statusEl.style.color = "#f87171";
+          attachBtn.textContent = "Attach";
+        } finally {
+          attachBtn.disabled = false;
+        }
+      });
+      const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;align-items:center;";
+      btnRow.appendChild(attachBtn);
+      btnRow.appendChild(statusEl);
+      row.appendChild(btnRow);
+      listEl.appendChild(row);
+    });
+  }
   let besPanel = null;
   function createBesPanel(ats) {
     const panel = document.createElement("div");
@@ -714,6 +968,10 @@
     <div id="horus-unknown-fields" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
       <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Unmapped Fields</div>
       <div id="horus-unknown-list"></div>
+    </div>
+    <div id="horus-file-section" style="display:none;margin-top:8px;border-top:1px solid #333;padding-top:8px;">
+      <div style="font-size:10px;color:#888;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">📎 File Uploads</div>
+      <div id="horus-file-list"></div>
     </div>
   `;
     let dragging = false, startY = 0, startTop = 0;
@@ -841,6 +1099,7 @@
       if (countEl) countEl.textContent = `${n} field${n !== 1 ? "s" : ""} filled`;
       if (undoBtn) undoBtn.style.color = "#fff";
       showUnknownFields(profile, variant ?? void 0);
+      void showFileUploadSection(profile, variant ?? void 0);
     });
     snippetBtn?.addEventListener("click", () => {
       openSnippetModal();
@@ -1042,12 +1301,16 @@
           return;
         }
         try {
-          const [profiles, variants] = await Promise.all([
+          const [profiles, variants, exps] = await Promise.all([
             fetch(`http://127.0.0.1:9741/profiles`).then((r) => r.json()),
             fetch(`http://127.0.0.1:9741/profiles/${activeProfileId}/variants`).then(
               (r) => r.json()
-            )
+            ),
+            fetch(`http://127.0.0.1:9741/profiles/${activeProfileId}/experience`).then(
+              (r) => r.json()
+            ).catch(() => [])
           ]);
+          experiences = exps;
           const profile = profiles.find((p) => p.id === activeProfileId) ?? null;
           const variant = variants.find((v) => v.id === activeVariantId) ?? variants.find((v) => v.is_default) ?? variants[0] ?? null;
           updateBesPanel(profile, variant);

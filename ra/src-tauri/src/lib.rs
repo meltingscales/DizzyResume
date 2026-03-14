@@ -69,6 +69,11 @@ pub fn run() {
             get_resume_files,
             import_resume_file,
             delete_resume_file,
+            // Experience Entries
+            get_experience_entries,
+            create_experience_entry,
+            update_experience_entry,
+            delete_experience_entry,
             // Serket's Vault
             vault_is_setup,
             vault_is_unlocked,

@@ -95,7 +95,8 @@ const raApi = {
   profiles: {
     list: () => get("/profiles"),
     get: (id) => get(`/profiles/${id}`),
-    variants: (profileId) => get(`/profiles/${profileId}/variants`)
+    variants: (profileId) => get(`/profiles/${profileId}/variants`),
+    experience: (profileId) => get(`/profiles/${profileId}/experience`)
   },
   snippets: {
     list: () => get("/snippets")
@@ -113,4 +114,4 @@ export {
   detectAts as d,
   raApi as r
 };
-//# sourceMappingURL=api-CG9irCF4.js.map
+//# sourceMappingURL=api-Cm-z_v1F.js.map

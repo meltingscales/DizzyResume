@@ -182,6 +182,49 @@ pub struct ImportResumeFileInput {
     pub kind: String,
 }
 
+// ── Experience Entries ────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExperienceEntry {
+    pub id: String,
+    pub profile_id: String,
+    pub company: String,
+    pub title: String,
+    pub location: String,
+    pub start_date: String,
+    pub end_date: Option<String>,
+    pub is_current: bool,
+    pub description: String,
+    pub sort_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateExperienceEntryInput {
+    pub profile_id: String,
+    pub company: String,
+    pub title: String,
+    pub location: String,
+    pub start_date: String,
+    pub end_date: Option<String>,
+    pub is_current: bool,
+    pub description: String,
+    pub sort_order: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateExperienceEntryInput {
+    pub company: String,
+    pub title: String,
+    pub location: String,
+    pub start_date: String,
+    pub end_date: Option<String>,
+    pub is_current: bool,
+    pub description: String,
+    pub sort_order: i64,
+}
+
 // ── Credential (Serket's Vault) ───────────────────────────────────────────────
 
 /// Returned to the frontend with the password already decrypted.

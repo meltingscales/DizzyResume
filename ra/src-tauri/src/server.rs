@@ -337,6 +337,43 @@ async fn update_application_status(
     Ok(Json(json!({ "id": id, "status": status, "updated_at": now })))
 }
 
+// GET /profiles/:id/experience
+async fn list_experience(
+    State(db): State<Database>,
+    Path(profile_id): Path<String>,
+) -> ApiResult<Vec<ExperienceEntry>> {
+    let conn = db.0.lock().unwrap();
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, profile_id, company, title, location, start_date, end_date,
+                    is_current, description, sort_order, created_at, updated_at
+             FROM experience_entries WHERE profile_id=?1 ORDER BY sort_order ASC",
+        )
+        .map_err(err500)?;
+    let rows = stmt
+        .query_map([&profile_id], |row| {
+            let is_current: i64 = row.get("is_current")?;
+            Ok(ExperienceEntry {
+                id: row.get("id")?,
+                profile_id: row.get("profile_id")?,
+                company: row.get("company")?,
+                title: row.get("title")?,
+                location: row.get("location")?,
+                start_date: row.get("start_date")?,
+                end_date: row.get("end_date")?,
+                is_current: is_current != 0,
+                description: row.get("description")?,
+                sort_order: row.get("sort_order")?,
+                created_at: row.get("created_at")?,
+                updated_at: row.get("updated_at")?,
+            })
+        })
+        .map_err(err500)?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(err500)?;
+    Ok(Json(rows))
+}
+
 // GET /profiles/:id/files
 async fn list_resume_files(
     State(db): State<Database>,
@@ -415,6 +452,7 @@ pub async fn serve(db: Database) {
         .route("/profiles", get(list_profiles))
         .route("/profiles/:id", get(get_profile))
         .route("/profiles/:id/variants", get(list_variants))
+        .route("/profiles/:id/experience", get(list_experience))
         .route("/profiles/:id/files", get(list_resume_files))
         .route("/files/:id/download", get(download_resume_file))
         .route("/snippets", get(list_snippets))
