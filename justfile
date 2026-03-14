@@ -9,12 +9,24 @@ default:
 # ── Installation ──────────────────────────────────────────────────────────────
 
 # Install Linux system dependencies required by Tauri (run once, needs sudo)
+[unix]
 install-sys-deps:
     sudo apt-get install -y \
         libwebkit2gtk-4.1-dev \
         libgtk-3-dev \
         libayatana-appindicator3-dev \
         librsvg2-dev
+
+# Check Windows Tauri prerequisites (WebView2, MSVC, Rust)
+[windows]
+install-sys-deps:
+    @echo "Windows Tauri prerequisites:"
+    @echo "  1. WebView2 — pre-installed on Windows 10 (1803+) and Windows 11"
+    @echo "     If missing: https://developer.microsoft.com/en-us/microsoft-edge/webview2/"
+    @echo "  2. MSVC Build Tools — install via Visual Studio Installer (C++ workload)"
+    @echo "     Or: winget install Microsoft.VisualStudio.2022.BuildTools"
+    @echo "  3. Rust — already installed if 'rustc --version' works"
+    @echo "     If missing: winget install Rustlang.Rust.MSVC"
 
 # Install all workspace dependencies
 install:
@@ -98,14 +110,27 @@ run package script:
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 # Remove all node_modules and build artifacts
+[unix]
 clean:
     pnpm -r --if-present run clean
     find . -name 'node_modules' -not -path '*/.git/*' -prune -exec rm -rf {} +
     find . -name 'dist' -not -path '*/.git/*' -not -path '*/src-tauri/*' -prune -exec rm -rf {} +
 
+[windows]
+clean:
+    pnpm -r --if-present run clean
+    powershell -NoProfile -Command "Get-ChildItem -Recurse -Force -Directory -Filter node_modules | Where-Object { $_.FullName -notmatch '\\.git' } | Remove-Item -Recurse -Force"
+    powershell -NoProfile -Command "Get-ChildItem -Recurse -Force -Directory -Filter dist | Where-Object { $_.FullName -notmatch '\\.git' -and $_.FullName -notmatch 'src-tauri' } | Remove-Item -Recurse -Force"
+
 # Remove pnpm lockfile and reinstall from scratch
+[unix]
 reset: clean
     rm -f pnpm-lock.yaml
+    pnpm install
+
+[windows]
+reset: clean
+    powershell -NoProfile -Command "Remove-Item -Force -ErrorAction SilentlyContinue pnpm-lock.yaml"
     pnpm install
 
 # ── Tauri ─────────────────────────────────────────────────────────────────────
